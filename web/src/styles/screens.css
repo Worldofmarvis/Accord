@@ -237,3 +237,58 @@
 
 /* The negotiation and session-ended designs use a 1180px page; search uses 1100px. */
 .shell-main:has(.page-wide) { max-width: 1180px; }
+
+.price-range-label.is-below.is-alt { top: 110px; }
+.price-range-label.is-above.is-alt { top: 22px; }
+
+/* ---------- Responsive: tablets, phones, touch ---------- */
+
+button, .btn, .chip { touch-action: manipulation; }
+
+@media (max-width: 900px) {
+  .chat { max-width: none; flex-basis: 100%; }
+  .dash-form { max-width: none; flex-basis: 100%; }
+}
+
+@media (max-width: 640px) {
+  /* Header: nav on its own row with 44px touch targets */
+  .shell-header { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+  .shell-nav { width: 100%; }
+  .shell-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+
+  /* 16px fields stop iOS from zooming in when a field is focused */
+  .input, .input-sm, .chat-input { font-size: var(--text-base); }
+
+  .card:not(.chat):not(.rematch-card) { padding: var(--space-4); }
+
+  /* Search results: price and button share one row under the text */
+  .service-card-side { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .service-card-price { text-align: left; }
+
+  /* Negotiation */
+  .neg-status { align-items: flex-start; }
+  .round-progress-count { font-size: var(--text-2xl); }
+  .offer-card-amount { font-size: 2rem; }
+  .price-range { margin: 0 var(--space-5); }
+  .log-row { flex-direction: column; gap: var(--space-2); }
+  .log-round { flex: 0 0 auto; }
+  .chat-head, .chat-form, .chat-log { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .chat-rule { margin-left: var(--space-4); margin-right: var(--space-4); }
+  .chat-foot { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .chat-log { min-height: 320px; max-height: 70svh; }
+
+  /* Session ended */
+  .ended-banner { padding: var(--space-4); }
+  .ended-banner-text h1 { font-size: var(--text-xl); }
+  .ended-service { text-align: left; }
+  .rounds-table th, .rounds-table td { padding: var(--space-2); }
+
+  /* Dashboards */
+  .dash-item-side { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .dash-item-price { text-align: left; }
+  .dash-form-actions .btn { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
