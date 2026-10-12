@@ -44,6 +44,9 @@
   --color-success-soft: #e3f4ea;
   --color-warning: #b45f06; /* added: round 3 warning, seller locked */
   --color-warning-soft: #fdf1dc;
+  /* Darker text shades that stay readable on the soft fills above (added). */
+  --color-danger-strong: #8c0001;
+  --color-warning-strong: #8f4a00;
   --color-info: var(--color-accent);
   --color-info-soft: var(--color-accent-soft);
 

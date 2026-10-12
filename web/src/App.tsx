@@ -8,6 +8,7 @@ import Payment from './pages/Payment'
 import NoAgreement from './pages/NoAgreement'
 import NotFound from './pages/NotFound'
 import './App.css'
+import './styles/screens.css'
 
 export default function App() {
   return (
