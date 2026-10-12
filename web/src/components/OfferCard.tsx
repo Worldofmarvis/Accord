@@ -4,12 +4,13 @@ import type { Offer, Role } from '../types/marketplace'
 
 type Props = {
   role: Role
+  currentRound: number
   offer: Offer | undefined
   /** Buyer view only. The seller's limits are never passed to this component. */
   limits?: { target: number; max: number }
 }
 
-export default function OfferCard({ role, offer, limits }: Props) {
+export default function OfferCard({ role, currentRound, offer, limits }: Props) {
   const isBuyer = role === 'buyer'
   const title = isBuyer ? 'Your agent' : 'Seller agent'
   return (
@@ -18,7 +19,7 @@ export default function OfferCard({ role, offer, limits }: Props) {
         <span className={`marker ${isBuyer ? 'marker-buyer' : 'marker-seller'}`} />
         <h2>{title}</h2>
       </div>
-      <div className="muted caption">{offer ? `Latest offer (Round ${offer.round})` : 'No offer yet'}</div>
+      <div className="muted caption">{offer ? (offer.round === currentRound ? 'Latest offer' : `Latest offer (Round ${offer.round})`) : 'No offer yet'}</div>
       <div className="offer-card-amount">{offer ? usd(offer.amount) : '–'}</div>
       {offer && <p className="small offer-card-note">{offer.note}</p>}
       {isBuyer && limits ? (
