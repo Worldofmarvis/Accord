@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search tab</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#faf8f5;font-family:'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;color:#001435}
+a{color:#0070e0}a:hover{color:#0057b3}
+</style>
+</helmet>
+<div style="background: #faf8f5; min-height: 1060px; font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; color: #001435">
+  <header style="background: #142c8e; color: #ffffff; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 8px 24px; min-height: 64px; box-sizing: border-box">
+    <span style="font-size: 18px; font-weight: 700">Agent Negotiation Marketplace</span>
+    <nav aria-label="Main" style="display: flex; gap: 8px; flex-wrap: wrap">
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; background: #27419a; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600">Search</a>
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500">Buyer dashboard</a>
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500">Seller dashboard</a>
+    </nav>
+  </header>
+
+  <main style="max-width: 1100px; margin: 0 auto; padding: 32px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+    <div>
+      <h1 style="margin: 0 0 8px; font-size: 28px; line-height: 1.2; font-weight: 700">Search services</h1>
+      <p style="margin: 0; font-size: 16px; color: #5b6577">Find a freelancer, then let your agent negotiate the price in up to 3 rounds.</p>
+    </div>
+
+    <section aria-label="Search filters" style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end">
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 2 1 280px">
+          <label for="kw" style="font-size: 14px; font-weight: 700">Keyword</label>
+          <input id="kw" type="text" value="website" placeholder="website, logo, blog post" style="height: 44px; box-sizing: border-box; padding: 0 12px; font-size: 16px; font-family: inherit; color: #001435; background: #ffffff; border: 1px solid #9aa3b2; border-radius: 8px">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 200px">
+          <label for="cat" style="font-size: 14px; font-weight: 700">Category</label>
+          <select id="cat" style="height: 44px; box-sizing: border-box; padding: 0 12px; font-size: 16px; font-family: inherit; color: #001435; background: #ffffff; border: 1px solid #9aa3b2; border-radius: 8px">
+            <option>Web development</option>
+            <option>Design</option>
+            <option>Writing</option>
+          </select>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1 1 160px">
+          <label for="maxp" style="font-size: 14px; font-weight: 700">Maximum list price (USD)</label>
+          <input id="maxp" type="text" value="500" style="height: 44px; box-sizing: border-box; padding: 0 12px; font-size: 16px; font-family: inherit; color: #001435; background: #ffffff; border: 1px solid #9aa3b2; border-radius: 8px">
+        </div>
+        <button type="button" style="height: 44px; padding: 0 28px; border: 1px solid transparent; border-radius: 999px; background: #003087; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+          Search
+        </button>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+        <span style="font-size: 14px; color: #5b6577; margin-right: 4px">Quick filter</span>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 999px; background: #e6f0fd; color: #0057b3; border: 1px solid #0070e0; font-family: inherit; font-size: 14px; font-weight: 700">Web development</button>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 999px; background: #ffffff; color: #001435; border: 1px solid #9aa3b2; font-family: inherit; font-size: 14px; font-weight: 500">Design</button>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 999px; background: #ffffff; color: #001435; border: 1px solid #9aa3b2; font-family: inherit; font-size: 14px; font-weight: 500">Writing</button>
+      </div>
+    </section>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 700">4 results for "website"</h2>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <label for="sort" style="font-size: 14px; color: #5b6577">Sort by</label>
+        <select id="sort" style="height: 40px; padding: 0 12px; font-size: 14px; font-family: inherit; color: #001435; background: #ffffff; border: 1px solid #9aa3b2; border-radius: 8px">
+          <option>Best match</option>
+          <option>List price: low to high</option>
+          <option>Delivery time</option>
+        </select>
+      </div>
+    </div>
+
+    <section aria-label="Results" style="display: flex; flex-direction: column; gap: 16px">
+
+      <article style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+        <div style="flex: 1 1 420px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px">
+            <span style="padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Web development</span>
+          </div>
+          <h3 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">5-page business website</h3>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #5b6577">Maya Santos</p>
+          <p style="margin: 0; font-size: 16px; line-height: 1.5">Responsive site with contact form, simple CMS setup and launch support.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex: 0 0 auto">
+          <div style="text-align: right">
+            <div style="font-size: 12px; color: #5b6577">List price</div>
+            <div style="font-size: 28px; font-weight: 400; line-height: 1.1">$500</div>
+            <div style="font-size: 14px; color: #5b6577">Delivery in 7 days</div>
+          </div>
+          <button type="button" style="min-height: 44px; padding: 0 28px; border: 1px solid transparent; border-radius: 999px; background: #003087; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Negotiate</button>
+        </div>
+      </article>
+
+      <article style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+        <div style="flex: 1 1 420px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px">
+            <span style="padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Web development</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: #fdf1dc; color: #8f4a00; font-size: 12px; font-weight: 700">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8f4a00" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>
+              Locked
+            </span>
+          </div>
+          <h3 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">Portfolio website for creatives</h3>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #5b6577">Daniel Reyes</p>
+          <p style="margin: 0; font-size: 16px; line-height: 1.5">Gallery layout, about page and contact form, built to be easy to update.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex: 0 0 auto">
+          <div style="text-align: right">
+            <div style="font-size: 12px; color: #5b6577">List price</div>
+            <div style="font-size: 28px; font-weight: 400; line-height: 1.1">$450</div>
+            <div style="font-size: 14px; color: #5b6577">Delivery in 10 days</div>
+          </div>
+          <button type="button" disabled style="min-height: 44px; padding: 0 20px; border: 1px solid #e5e5e5; border-radius: 999px; background: #f3f1ed; color: #5b6577; font-family: inherit; font-size: 14px; font-weight: 700; cursor: not-allowed">In negotiation with another buyer</button>
+        </div>
+      </article>
+
+      <article style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+        <div style="flex: 1 1 420px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px">
+            <span style="padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Web development</span>
+            <span style="padding: 2px 10px; border-radius: 999px; background: #f3f1ed; color: #5b6577; font-size: 12px; font-weight: 700">Design</span>
+          </div>
+          <h3 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">Landing page and brand setup</h3>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #5b6577">Priya Nair</p>
+          <p style="margin: 0; font-size: 16px; line-height: 1.5">One high-converting landing page with logo files, colors and type choices.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex: 0 0 auto">
+          <div style="text-align: right">
+            <div style="font-size: 12px; color: #5b6577">List price</div>
+            <div style="font-size: 28px; font-weight: 400; line-height: 1.1">$380</div>
+            <div style="font-size: 14px; color: #5b6577">Delivery in 5 days</div>
+          </div>
+          <button type="button" style="min-height: 44px; padding: 0 28px; border: 1px solid transparent; border-radius: 999px; background: #003087; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Negotiate</button>
+        </div>
+      </article>
+
+      <article style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+        <div style="flex: 1 1 420px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px">
+            <span style="padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Web development</span>
+          </div>
+          <h3 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">WordPress site fix and redesign</h3>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #5b6577">Lucas Moreau</p>
+          <p style="margin: 0; font-size: 16px; line-height: 1.5">Clean up an existing WordPress site: speed, layout fixes and a refreshed home page.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex: 0 0 auto">
+          <div style="text-align: right">
+            <div style="font-size: 12px; color: #5b6577">List price</div>
+            <div style="font-size: 28px; font-weight: 400; line-height: 1.1">$320</div>
+            <div style="font-size: 14px; color: #5b6577">Delivery in 4 days</div>
+          </div>
+          <button type="button" style="min-height: 44px; padding: 0 28px; border: 1px solid transparent; border-radius: 999px; background: #003087; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Negotiate</button>
+        </div>
+      </article>
+
+    </section>
+
+    <p style="margin: 0; font-size: 14px; color: #5b6577">List price is the seller's starting price. Your agent negotiates for you, and nothing is final until you approve the agreed price.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

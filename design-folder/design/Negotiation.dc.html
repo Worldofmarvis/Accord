@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Live negotiation</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#faf8f5;font-family:'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;color:#001435}
+a{color:#0070e0}a:hover{color:#0057b3}
+</style>
+</helmet>
+<div style="background: #faf8f5; min-height: 1260px; font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif; color: #001435">
+  <header style="background: #142c8e; color: #ffffff; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 8px 24px; min-height: 64px; box-sizing: border-box">
+    <span style="font-size: 18px; font-weight: 700">Agent Negotiation Marketplace</span>
+    <nav aria-label="Main" style="display: flex; gap: 8px; flex-wrap: wrap">
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500">Search</a>
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; background: #27419a; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600">Buyer dashboard</a>
+      <a href="#" style="padding: 8px 16px; border-radius: 999px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500">Seller dashboard</a>
+    </nav>
+  </header>
+
+  <main style="max-width: 1180px; margin: 0 auto; padding: 32px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+      <div>
+        <h1 style="margin: 0 0 4px; font-size: 28px; line-height: 1.2; font-weight: 700">5-page business website</h1>
+        <p style="margin: 0; font-size: 16px; color: #5b6577">Negotiating with Maya Santos. List price $500.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+        <span style="padding: 4px 12px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Negotiation active</span>
+        <span style="font-size: 12px; color: #5b6577">This seller is locked for other buyers</span>
+      </div>
+    </div>
+
+    <section aria-label="Round progress" style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: center">
+      <div style="flex: 1 1 280px">
+        <div style="font-size: 12px; font-weight: 700; color: #5b6577; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 4px">Negotiation rounds</div>
+        <div style="font-size: 40px; font-weight: 700; line-height: 1.1">Round 2 of 3</div>
+        <p style="margin: 8px 0 0; font-size: 14px; color: #5b6577">Round 3 is the last round. Both agents make their best offer, then the session ends if there is no deal.</p>
+      </div>
+      <ol style="flex: 2 1 400px; display: flex; gap: 12px; margin: 0; padding: 0; list-style: none">
+        <li style="flex: 1 1 0; min-width: 0">
+          <div style="height: 8px; border-radius: 4px; background: #003087"></div>
+          <div style="margin-top: 8px; font-size: 14px; font-weight: 700">Round 1</div>
+          <div style="font-size: 12px; color: #5b6577">Done</div>
+        </li>
+        <li style="flex: 1 1 0; min-width: 0">
+          <div style="height: 8px; border-radius: 4px; background: #0070e0"></div>
+          <div style="margin-top: 8px; font-size: 14px; font-weight: 700">Round 2</div>
+          <div style="font-size: 12px; color: #0057b3; font-weight: 700">In progress</div>
+        </li>
+        <li style="flex: 1 1 0; min-width: 0">
+          <div style="height: 8px; border-radius: 4px; background: #e5e5e5"></div>
+          <div style="margin-top: 8px; font-size: 14px; font-weight: 700">Round 3</div>
+          <div style="font-size: 12px; color: #5b6577">Final round</div>
+        </li>
+      </ol>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+      <div style="flex: 2 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+
+        <div style="display: flex; flex-wrap: wrap; gap: 16px">
+          <section aria-label="Your agent" style="flex: 1 1 260px; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+              <span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #0070e0"></span>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 700">Your agent</h2>
+            </div>
+            <div style="font-size: 12px; color: #5b6577">Latest offer</div>
+            <div style="font-size: 40px; line-height: 1.1">$360</div>
+            <p style="margin: 8px 0 16px; font-size: 14px; line-height: 1.5">A small step up. Scope stays the same: 5 pages, contact form, blog.</p>
+            <div style="background: #e6f0fd; border-radius: 12px; padding: 12px; font-size: 14px">
+              <div style="font-weight: 700; margin-bottom: 2px">Your limits: target $350, max $400</div>
+              <div style="color: #5b6577; font-size: 12px">Only you can see this. The engine will not accept a price above your max.</div>
+            </div>
+          </section>
+
+          <section aria-label="Seller agent" style="flex: 1 1 260px; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+              <span style="display: inline-block; width: 14px; height: 14px; border-radius: 2px; background: #0b7a75"></span>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 700">Seller agent</h2>
+            </div>
+            <div style="font-size: 12px; color: #5b6577">Latest offer (Round 1)</div>
+            <div style="font-size: 40px; line-height: 1.1">$500</div>
+            <p style="margin: 8px 0 16px; font-size: 14px; line-height: 1.5">Starting at the list price. Open to adjusting the price if the scope changes.</p>
+            <div style="display: flex; align-items: center; gap: 8px; background: #f3f1ed; border-radius: 12px; padding: 12px; font-size: 14px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b6577" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>
+              <span style="color: #5b6577">The seller's limits are private.</span>
+            </div>
+          </section>
+        </div>
+
+        <section aria-label="Price range" style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px">
+          <h2 style="margin: 0 0 4px; font-size: 18px; font-weight: 700">Price range</h2>
+          <p style="margin: 0 0 16px; font-size: 14px; color: #5b6577">Offers so far, from $300 to $520.</p>
+          <div style="position: relative; height: 150px; margin: 0 40px">
+            <div style="position: absolute; left: 0; right: 0; top: 72px; height: 4px; border-radius: 2px; background: #e5e5e5"></div>
+
+            <div style="position: absolute; left: 45.45%; top: 22px; height: 104px; border-left: 2px dashed #003087"></div>
+            <div style="position: absolute; left: 45.45%; top: 0; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 700; color: #003087">Your max $400</div>
+
+            <div style="position: absolute; left: 18.18%; top: 65px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #0070e0; border: 2px solid #ffffff; box-sizing: border-box"></div>
+            <div style="position: absolute; left: 18.18%; top: 92px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 700">R1 $340</div>
+
+            <div style="position: absolute; left: 27.27%; top: 65px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #0070e0; border: 2px solid #ffffff; box-sizing: border-box"></div>
+            <div style="position: absolute; left: 27.27%; top: 92px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 700">R2 $360</div>
+
+            <div style="position: absolute; left: 90.91%; top: 65px; width: 18px; height: 18px; margin-left: -9px; border-radius: 3px; background: #0b7a75; border: 2px solid #ffffff; box-sizing: border-box"></div>
+            <div style="position: absolute; left: 90.91%; top: 40px; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 700">R1 $500</div>
+
+            <div style="position: absolute; left: 0; top: 130px; font-size: 12px; color: #5b6577">$300</div>
+            <div style="position: absolute; right: 0; top: 130px; font-size: 12px; color: #5b6577">$520</div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 8px; font-size: 12px; color: #5b6577">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #0070e0"></span>Your agent</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: #0b7a75"></span>Seller agent</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px"><span style="display: inline-block; width: 0; height: 12px; border-left: 2px dashed #003087"></span>Your max (only you can see this)</span>
+          </div>
+        </section>
+
+        <section aria-label="Negotiation log" style="background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px">
+          <h2 style="margin: 0 0 8px; font-size: 18px; font-weight: 700">Negotiation log</h2>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #5b6577">Every offer is checked by the engine before it counts.</p>
+
+          <div style="display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid #efefef">
+            <div style="flex: 0 0 72px"><span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: #f3f1ed; font-size: 12px; font-weight: 700">Round 1</span></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 700">Your agent offered $340</span><span style="font-size: 12px; color: #0a7a43; font-weight: 700">Engine check: passed</span></div>
+              <p style="margin: 4px 0 0; font-size: 14px; line-height: 1.5; color: #5b6577">Opening below the target to leave room to move.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid #efefef">
+            <div style="flex: 0 0 72px"><span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: #f3f1ed; font-size: 12px; font-weight: 700">Round 1</span></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="font-size: 14px; font-weight: 700">Seller agent offered $500</div>
+              <p style="margin: 4px 0 8px; font-size: 14px; line-height: 1.5; color: #5b6577">Starting at the list price. Open to adjusting the price if the scope changes.</p>
+              <div style="background: #fde8e8; border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.5; color: #8c0001">
+                <span style="font-weight: 700">Engine blocked an offer.</span> The seller agent proposed $520, which is above the listed price of $500. The engine set the offer to $500.
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid #efefef">
+            <div style="flex: 0 0 72px"><span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Round 2</span></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 700">Your agent offered $360</span><span style="font-size: 12px; color: #0a7a43; font-weight: 700">Engine check: passed</span></div>
+              <p style="margin: 4px 0 0; font-size: 14px; line-height: 1.5; color: #5b6577">A small step up with the same scope: 5 pages, contact form, blog.</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 16px; padding: 16px 0 0; border-top: 1px solid #efefef">
+            <div style="flex: 0 0 72px"><span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e6f0fd; color: #0057b3; font-size: 12px; font-weight: 700">Round 2</span></div>
+            <div style="flex: 1 1 0; min-width: 0">
+              <div style="border: 1px dashed #9aa3b2; border-radius: 12px; padding: 12px; font-size: 14px; color: #5b6577">Waiting for the seller agent's counter-offer...</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section aria-label="Chat" style="flex: 1 1 340px; max-width: 440px; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-bottom: 1px solid #efefef">
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700">Chat with Maya</h2>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #0a7a43; font-weight: 700"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0a7a43"></span>Online</span>
+        </div>
+
+        <div style="margin: 16px 24px 0; display: flex; gap: 8px; align-items: flex-start; background: #e6f0fd; border-radius: 12px; padding: 12px; font-size: 14px; line-height: 1.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#003087" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: 0 0 auto; margin-top: 3px"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg>
+          <span>You can discuss scope here. Chat can never change the price. Only the negotiation engine does that.</span>
+        </div>
+
+        <div style="padding: 16px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 440px">
+          <div style="align-self: flex-start; max-width: 85%">
+            <div style="font-size: 12px; color: #5b6577; margin-bottom: 4px">Maya, seller. 10:42</div>
+            <div style="background: #f3f1ed; border-radius: 16px; padding: 10px 14px; font-size: 14px; line-height: 1.5">Hi! Does the 5-page site include a contact form?</div>
+          </div>
+          <div style="align-self: flex-end; max-width: 85%">
+            <div style="font-size: 12px; color: #5b6577; margin-bottom: 4px; text-align: right">You. 10:44</div>
+            <div style="background: #003087; color: #ffffff; border-radius: 16px; padding: 10px 14px; font-size: 14px; line-height: 1.5">Yes, plus a simple blog page. I need it by Oct 30.</div>
+          </div>
+          <div style="align-self: flex-start; max-width: 85%">
+            <div style="font-size: 12px; color: #5b6577; margin-bottom: 4px">Maya, seller. 10:45</div>
+            <div style="background: #f3f1ed; border-radius: 16px; padding: 10px 14px; font-size: 14px; line-height: 1.5">Great. I can fit both if the scope stays at 5 pages.</div>
+          </div>
+          <div style="align-self: center; text-align: center; font-size: 12px; color: #5b6577; background: #f3f1ed; border-radius: 999px; padding: 4px 12px">Scope noted: 5 pages, contact form, blog</div>
+          <div style="align-self: flex-end; max-width: 85%">
+            <div style="font-size: 12px; color: #5b6577; margin-bottom: 4px; text-align: right">You. 10:47</div>
+            <div style="background: #003087; color: #ffffff; border-radius: 16px; padding: 10px 14px; font-size: 14px; line-height: 1.5">Can we just agree on $300 here?</div>
+          </div>
+          <div style="align-self: center; text-align: center; font-size: 12px; line-height: 1.5; color: #8f4a00; background: #fdf1dc; border-radius: 12px; padding: 8px 12px">Prices can't be changed in chat. Your agent makes offers through the negotiation.</div>
+        </div>
+
+        <div style="border-top: 1px solid #efefef; padding: 16px 24px; display: flex; gap: 8px; align-items: center">
+          <label for="msg" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Message about scope</label>
+          <input id="msg" type="text" placeholder="Message about scope..." style="flex: 1 1 0; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 16px; font-size: 14px; font-family: inherit; color: #001435; background: #ffffff; border: 1px solid #9aa3b2; border-radius: 999px">
+          <button type="button" style="height: 44px; padding: 0 20px; border: 1px solid transparent; border-radius: 999px; background: #003087; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Send</button>
+        </div>
+        <div style="padding: 0 24px 16px; font-size: 12px; color: #5b6577">Messages are saved with this negotiation.</div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1260}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
