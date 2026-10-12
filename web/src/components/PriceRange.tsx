@@ -24,20 +24,24 @@ export default function PriceRange({ offers, buyerMax }: Props) {
           Your max {usd(buyerMax)}
         </div>
 
-        {offers.map((o) => (
+        {offers.map((o) => {
+          // Every other label of the same side sits a little further out, so close offers never overlap.
+          const alt = offers.filter((x) => x.role === o.role && x.round < o.round).length % 2 === 1
+          return (
           <div key={`${o.round}-${o.role}`}>
             <div
               className={`price-range-dot ${o.role === 'buyer' ? 'marker-buyer' : 'marker-seller'}`}
               style={{ left: pos(o.amount) }}
             />
             <div
-              className={`price-range-label ${o.role === 'buyer' ? 'is-below' : 'is-above'}`}
+              className={`price-range-label ${o.role === 'buyer' ? 'is-below' : 'is-above'}${alt ? ' is-alt' : ''}`}
               style={{ left: pos(o.amount) }}
             >
               R{o.round} {usd(o.amount)}
             </div>
           </div>
-        ))}
+          )
+        })}
 
         <div className="price-range-end price-range-end-lo">{usd(lo)}</div>
         <div className="price-range-end price-range-end-hi">{usd(hi)}</div>
