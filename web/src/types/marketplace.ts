@@ -7,6 +7,8 @@ export type Listing = {
   sellerName: string
   description: string
   categories: string[]
+  /** Extra search words, so a listing can match a keyword its text doesn't contain. */
+  tags: string[]
   listPrice: number
   deliveryDays: number
   /** True while another buyer has an active negotiation with this seller. */
