@@ -1,0 +1,71 @@
+.shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e5e5e5;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+
+.shell-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shell-nav a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.shell-nav a:hover {
+  background: #f3f3f3;
+}
+
+.shell-nav a.active {
+  background: #e8f0fe;
+  font-weight: 600;
+}
+
+.shell-nav a:focus-visible {
+  outline: 2px solid #1a56db;
+  outline-offset: 2px;
+}
+
+.shell-main {
+  flex: 1;
+  padding: 24px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.placeholder {
+  border: 1px dashed #bbb;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.placeholder h1 {
+  margin-top: 0;
+}
+
+.placeholder .day {
+  color: #666;
+  font-size: 0.9rem;
+}
