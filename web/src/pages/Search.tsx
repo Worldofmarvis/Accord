@@ -8,8 +8,6 @@ import type { Listing } from '../types/marketplace'
 type Filters = { keyword: string; category: string; maxPrice: string }
 type Sort = 'match' | 'price' | 'delivery'
 
-const ALL = 'All categories'
-
 function applyFilters(items: Listing[], f: Filters, sort: Sort): Listing[] {
   const kw = f.keyword.trim().toLowerCase()
   const max = Number(f.maxPrice.replace(/[^0-9.]/g, ''))
@@ -17,8 +15,8 @@ function applyFilters(items: Listing[], f: Filters, sort: Sort): Listing[] {
 
   const out = items.filter(
     (l) =>
-      (!kw || `${l.title} ${l.description} ${l.sellerName}`.toLowerCase().includes(kw)) &&
-      (f.category === ALL || l.categories.includes(f.category)) &&
+      (!kw || `${l.title} ${l.description} ${l.sellerName} ${l.tags.join(' ')}`.toLowerCase().includes(kw)) &&
+      l.categories.includes(f.category) &&
       l.listPrice <= limit,
   )
   if (sort === 'price') out.sort((a, b) => a.listPrice - b.listPrice)
@@ -78,7 +76,6 @@ export default function Search() {
               value={draft.category}
               onChange={(e) => setDraft({ ...draft, category: e.target.value })}
             >
-              <option>{ALL}</option>
               {categories.map((c) => (
                 <option key={c}>{c}</option>
               ))}

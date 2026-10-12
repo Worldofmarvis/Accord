@@ -17,7 +17,7 @@ export default function Negotiation() {
   const latest = (role: Role) => [...n.offers].reverse().find((o) => o.role === role)
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-wide">
       <div className="neg-head">
         <div>
           <h1>{n.service}</h1>
@@ -36,8 +36,8 @@ export default function Negotiation() {
       <div className="neg-layout">
         <div className="neg-main">
           <div className="neg-agents">
-            <OfferCard role="buyer" offer={latest('buyer')} limits={n.buyerLimits} />
-            <OfferCard role="seller" offer={latest('seller')} />
+            <OfferCard role="buyer" currentRound={n.round} offer={latest('buyer')} limits={n.buyerLimits} />
+            <OfferCard role="seller" currentRound={n.round} offer={latest('seller')} />
           </div>
           <PriceRange offers={n.offers} buyerMax={n.buyerLimits.max} />
           <NegotiationLog negotiation={n} />

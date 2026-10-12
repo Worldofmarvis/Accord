@@ -45,7 +45,7 @@ export default function NoAgreement() {
   ]
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-wide">
       <section aria-label="Session ended" className="ended-banner">
         <div className="ended-icon">
           <CloseIcon color="var(--color-primary-contrast)" />
