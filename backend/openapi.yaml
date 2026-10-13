@@ -1,9 +1,42 @@
 openapi: 3.0.3
 info:
   title: Agent Negotiation Marketplace API
-  version: 0.1.0
+  version: 0.2.0
+  description: >
+    DRAFT. Demo-only authentication: send the chosen user's id in the
+    X-User-Id header on routes marked as requiring a user.
 servers:
   - url: http://localhost:3000
+
+components:
+  securitySchemes:
+    DemoUser:
+      type: apiKey
+      in: header
+      name: X-User-Id
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: Maya Santos }
+        role: { type: string, enum: [buyer, seller] }
+    Listing:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        sellerId: { type: integer, example: 1 }
+        sellerName: { type: string, example: Maya Santos }
+        title: { type: string, example: 5-page business website }
+        category: { type: string, example: Web development }
+        description: { type: string }
+        listPrice: { type: number, example: 500 }
+        deliveryDays: { type: integer, example: 7 }
+        locked: { type: boolean, description: True when the seller is in an active negotiation }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
 
 paths:
   /health:
@@ -12,70 +45,92 @@ paths:
       responses:
         '200':
           description: Server is up
+
+  /users/demo:
+    get:
+      summary: List demo users for the user picker
+      parameters:
+        - { name: role, in: query, schema: { type: string, enum: [buyer, seller] } }
+      responses:
+        '200':
+          description: Demo users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /me:
+    get:
+      summary: Return the current demo user
+      security: [{ DemoUser: [] }]
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401':
+          description: Missing or unknown X-User-Id
+
+  /listings/search:
+    get:
+      summary: Search listings
+      parameters:
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: maxPrice, in: query, schema: { type: number } }
+        - { name: sort, in: query, schema: { type: string, enum: [best_match, price_asc, price_desc] } }
+      responses:
+        '200':
+          description: Matching listings
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                    example: ok
-  
-  /auth/login:
+                  total: { type: integer, example: 4 }
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/Listing' }
+
+  /listings/{id}:
+    get:
+      summary: Get one listing
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: The listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '404':
+          description: Not found
+
+  /listings:
     post:
-      summary: Loging into existing account                   
-      requestBody: 
-        required: true 
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email,password] 
-              properties:
-                email:
-                  type: string
-                  example: this@example.com
-                password: 
-                  type: string
-                  example:  mypassword123
-    responses:
-       '200':
-         description: Login worked, returns a token 
-       '401':
-         description: Wrong email and password
-         
-
-
-
-
-
-
-  /auth/register:
-    post:
-      summary: Create a new account
+      summary: Create a listing (seller only)
+      security: [{ DemoUser: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [email, password, role]
+              required: [title, category, listPrice]
               properties:
-                email:
-                  type: string
-                  example: sam@example.com
-                password:
-                  type: string
-                  example: mypassword123
-                role:
-                  type: string
-                  enum: [buyer, seller]
+                title: { type: string }
+                category: { type: string }
+                description: { type: string }
+                listPrice: { type: number }
+                deliveryDays: { type: integer }
       responses:
         '201':
-          description: Account created
-        '400':
-          description: Missing or invalid fields
-        '409':
-          description: Email already registered
-
-
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '400': { description: Missing or invalid fields }
+        '401': { description: Missing or unknown X-User-Id }
+        '403': { description: Not a seller }
