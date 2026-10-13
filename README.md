@@ -33,3 +33,4 @@ Open http://localhost:5173
 
 - Never commit secrets. Keep keys in `.env` files (git-ignored) and share a `.env.example` instead.
 - Work on a branch and open a pull request into `main`.
+- Pull first then push the changes
