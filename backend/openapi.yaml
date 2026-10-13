@@ -1,0 +1,81 @@
+openapi: 3.0.3
+info:
+  title: Agent Negotiation Marketplace API
+  version: 0.1.0
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /health:
+    get:
+      summary: Check that the server is running
+      responses:
+        '200':
+          description: Server is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  
+  /auth/login:
+    post:
+      summary: Loging into existing account                   
+      requestBody: 
+        required: true 
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email,password] 
+              properties:
+                email:
+                  type: string
+                  example: this@example.com
+                password: 
+                  type: string
+                  example:  mypassword123
+    responses:
+       '200':
+         description: Login worked, returns a token 
+       '401':
+         description: Wrong email and password
+         
+
+
+
+
+
+
+  /auth/register:
+    post:
+      summary: Create a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email:
+                  type: string
+                  example: sam@example.com
+                password:
+                  type: string
+                  example: mypassword123
+                role:
+                  type: string
+                  enum: [buyer, seller]
+      responses:
+        '201':
+          description: Account created
+        '400':
+          description: Missing or invalid fields
+        '409':
+          description: Email already registered
+
+
