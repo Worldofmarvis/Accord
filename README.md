@@ -11,7 +11,7 @@ Buyer and seller AI agents negotiate a service price in at most 3 rounds, then s
 ## Run the front end
 
 ```bash
-cd web
+cmd web
 npm install
 npm run dev
 ```
