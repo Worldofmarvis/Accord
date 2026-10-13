@@ -1,4 +1,5 @@
 // Shapes for the buyer and seller dashboards.
+import type { NegotiationStatus } from './marketplace'
 
 export type BuyerRequest = {
   id: string
@@ -12,11 +13,13 @@ export type BuyerRequest = {
   max: number
 }
 
+export type NewBuyerRequest = Omit<BuyerRequest, 'id'>
+
 export type BuyerNegotiationRow = {
   id: string
   service: string
   sellerName: string
-  status: 'active' | 'no-agreement'
+  status: NegotiationStatus
   round: number
   maxRounds: number
   buyerOffer: number
@@ -34,7 +37,10 @@ export type SellerListing = {
   deliveryDays: number
 }
 
+export type NewSellerListing = Omit<SellerListing, 'id'>
+
 export type SellerActiveNegotiation = {
+  negotiationId: string
   listingId: string
   round: number
   maxRounds: number

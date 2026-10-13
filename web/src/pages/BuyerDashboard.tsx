@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { api, errorMessage } from '../api'
 import Badge from '../components/Badge'
+import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
-import { categories, DEMO_NEGOTIATION_ID } from '../data/mock'
-import { buyerNegotiations, initialBuyerRequests } from '../data/dashboardMock'
+import { useAsync } from '../hooks/useAsync'
+import { categories } from '../lib/categories'
 import { parsePrice, todayISO } from '../lib/forms'
 import { usd } from '../lib/format'
-import type { BuyerRequest } from '../types/dashboard'
 import '../styles/dashboards.css'
 
 type Form = { title: string; category: string; deliverables: string; deadline: string; target: string; max: string }
@@ -31,34 +32,44 @@ function validate(f: Form): Errors {
 export default function BuyerDashboard() {
   const [form, setForm] = useState<Form>(emptyForm)
   const [errors, setErrors] = useState<Errors>({})
-  const [requests, setRequests] = useState<BuyerRequest[]>(initialBuyerRequests)
   const [saved, setSaved] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const requests = useAsync(() => api.listBuyerRequests(), [])
+  const negotiations = useAsync(() => api.listBuyerNegotiations(), [])
 
   const set = (key: keyof Form) => (e: { target: { value: string } }) => {
     setForm({ ...form, [key]: e.target.value })
     setSaved(false)
   }
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault()
+    // The back end checks these rules too. Checking here just gives faster feedback.
     const found = validate(form)
     setErrors(found)
-    if (Object.keys(found).length > 0) return
-    // TODO: send to the API.
-    setRequests([
-      {
-        id: `r-${Date.now()}`,
+    if (Object.keys(found).length > 0 || submitting) return
+
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await api.createBuyerRequest({
         title: form.title.trim(),
         category: form.category,
         deliverables: form.deliverables.trim(),
         deadline: form.deadline,
         target: parsePrice(form.target) ?? 0,
         max: parsePrice(form.max) ?? 0,
-      },
-      ...requests,
-    ])
-    setForm(emptyForm)
-    setSaved(true)
+      })
+      setForm(emptyForm)
+      setSaved(true)
+      requests.reload()
+    } catch (err) {
+      setSubmitError(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const err = (key: keyof Form) => ({
@@ -133,10 +144,15 @@ export default function BuyerDashboard() {
               Request saved. <Link to="/search">Find a seller</Link> to start negotiating.
             </div>
           )}
+          {submitError && (
+            <div className="notice notice-danger" role="alert">
+              Your request was not saved. {submitError}
+            </div>
+          )}
 
           <div className="dash-form-actions">
-            <button type="submit" className="btn btn-primary btn-lg">
-              Save request
+            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+              {submitting ? 'Saving...' : 'Save request'}
             </button>
           </div>
         </form>
@@ -145,65 +161,82 @@ export default function BuyerDashboard() {
           <section aria-label="My negotiations" className="card">
             <h2 className="card-title">My negotiations</h2>
             <p className="muted small">Each negotiation lasts at most 3 rounds.</p>
-            {buyerNegotiations.map((n) => (
-              <div key={n.id} className="dash-item">
-                <div className="dash-item-main">
-                  <div className="dash-item-tags">
-                    {n.status === 'active' ? (
-                      <Badge tone="info">
-                        Active, round {n.round} of {n.maxRounds}
-                      </Badge>
-                    ) : (
-                      <Badge tone="warning">No agreement</Badge>
-                    )}
+            {negotiations.error != null && <ErrorCard error={negotiations.error} onRetry={negotiations.reload} />}
+            {negotiations.error == null && !negotiations.data && <LoadingCard label="Loading your negotiations..." />}
+            {negotiations.error == null && negotiations.data?.length === 0 && (
+              <p className="dash-empty">No negotiations yet. Search for a service to start one.</p>
+            )}
+            {negotiations.error == null &&
+              negotiations.data?.map((n) => {
+                const path = `/negotiations/${encodeURIComponent(n.id)}`
+                return (
+                  <div key={n.id} className="dash-item">
+                    <div className="dash-item-main">
+                      <div className="dash-item-tags">
+                        {n.status === 'active' && (
+                          <Badge tone="info">
+                            Active, round {n.round} of {n.maxRounds}
+                          </Badge>
+                        )}
+                        {n.status === 'agreed' && <Badge tone="success">Agreed</Badge>}
+                        {n.status === 'no_agreement' && <Badge tone="warning">No agreement</Badge>}
+                      </div>
+                      <h3 className="dash-item-title">{n.service}</h3>
+                      <p className="dash-item-meta">{n.sellerName}</p>
+                      <p className="dash-item-meta">
+                        Your agent {usd(n.buyerOffer)}, seller agent {usd(n.sellerOffer)}
+                      </p>
+                    </div>
+                    <div className="dash-item-side">
+                      {n.status === 'active' && (
+                        <Link to={path} className="btn btn-primary btn-lg">
+                          Open negotiation
+                        </Link>
+                      )}
+                      {n.status === 'agreed' && (
+                        <Link to={`${path}/pay`} className="btn btn-primary btn-lg">
+                          Approve and pay
+                        </Link>
+                      )}
+                      {n.status === 'no_agreement' && (
+                        <Link to={`${path}/no-agreement`} className="btn btn-secondary btn-lg">
+                          See what happened
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="dash-item-title">{n.service}</h3>
-                  <p className="dash-item-meta">{n.sellerName}</p>
-                  <p className="dash-item-meta">
-                    Your agent {usd(n.buyerOffer)}, seller agent {usd(n.sellerOffer)}
-                  </p>
-                </div>
-                <div className="dash-item-side">
-                  {/* TODO: link to the real negotiation id from the API. */}
-                  {n.status === 'active' ? (
-                    <Link to={`/negotiations/${DEMO_NEGOTIATION_ID}`} className="btn btn-primary btn-lg">
-                      Open negotiation
-                    </Link>
-                  ) : (
-                    <Link to={`/negotiations/${DEMO_NEGOTIATION_ID}/no-agreement`} className="btn btn-secondary btn-lg">
-                      See what happened
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
+                )
+              })}
           </section>
 
           <section aria-label="My requests" className="card">
             <h2 className="card-title">My requests</h2>
             <p className="muted small">Your target and maximum are private to you.</p>
-            {requests.length === 0 && <p className="dash-empty">No requests yet.</p>}
-            {requests.map((r) => (
-              <div key={r.id} className="dash-item">
-                <div className="dash-item-main">
-                  <div className="dash-item-tags">
-                    <Badge tone="info">{r.category}</Badge>
-                  </div>
-                  <h3 className="dash-item-title">{r.title}</h3>
-                  <p className="dash-item-meta">{r.deliverables}</p>
-                  <p className="dash-item-meta">Deadline {r.deadline}</p>
-                </div>
-                <div className="dash-item-side">
-                  <div className="dash-item-price">
-                    <div className="muted caption">Target / max</div>
-                    <div className="dash-item-amount">
-                      {usd(r.target)} / {usd(r.max)}
+            {requests.error != null && <ErrorCard error={requests.error} onRetry={requests.reload} />}
+            {requests.error == null && !requests.data && <LoadingCard label="Loading your requests..." />}
+            {requests.error == null && requests.data?.length === 0 && <p className="dash-empty">No requests yet.</p>}
+            {requests.error == null &&
+              requests.data?.map((r) => (
+                <div key={r.id} className="dash-item">
+                  <div className="dash-item-main">
+                    <div className="dash-item-tags">
+                      <Badge tone="info">{r.category}</Badge>
                     </div>
+                    <h3 className="dash-item-title">{r.title}</h3>
+                    <p className="dash-item-meta">{r.deliverables}</p>
+                    <p className="dash-item-meta">Deadline {r.deadline}</p>
                   </div>
-                  <Badge tone="neutral">Only you can see this</Badge>
+                  <div className="dash-item-side">
+                    <div className="dash-item-price">
+                      <div className="muted caption">Target / max</div>
+                      <div className="dash-item-amount">
+                        {usd(r.target)} / {usd(r.max)}
+                      </div>
+                    </div>
+                    <Badge tone="neutral">Only you can see this</Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </section>
         </div>
       </div>

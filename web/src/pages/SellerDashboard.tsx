@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { api, errorMessage } from '../api'
 import Badge from '../components/Badge'
+import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
-import { categories, DEMO_NEGOTIATION_ID } from '../data/mock'
-import { initialSellerListings, sellerActiveNegotiation } from '../data/dashboardMock'
+import { useAsync } from '../hooks/useAsync'
+import { categories } from '../lib/categories'
 import { parsePrice } from '../lib/forms'
 import { usd } from '../lib/format'
 import type { SellerListing } from '../types/dashboard'
@@ -40,11 +41,14 @@ const toForm = (l: SellerListing): Form => ({
 export default function SellerDashboard() {
   const [form, setForm] = useState<Form>(emptyForm)
   const [errors, setErrors] = useState<Errors>({})
-  const [listings, setListings] = useState<SellerListing[]>(initialSellerListings)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saved, setSaved] = useState<'added' | 'updated' | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const active = sellerActiveNegotiation
+  const listings = useAsync(() => api.listSellerListings(), [])
+  const activeRequest = useAsync(() => api.getSellerActiveNegotiation(), [])
+  const active = activeRequest.data ?? null
 
   const set = (key: keyof Form) => (e: { target: { value: string } }) => {
     setForm({ ...form, [key]: e.target.value })
@@ -55,16 +59,17 @@ export default function SellerDashboard() {
     setForm(emptyForm)
     setErrors({})
     setEditingId(null)
+    setSubmitError(null)
   }
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault()
+    // The back end checks these rules too. Checking here just gives faster feedback.
     const found = validate(form)
     setErrors(found)
-    if (Object.keys(found).length > 0) return
-    // TODO: send to the API.
-    const listing: SellerListing = {
-      id: editingId ?? `l-${Date.now()}`,
+    if (Object.keys(found).length > 0 || submitting) return
+
+    const input = {
       title: form.title.trim(),
       category: form.category,
       deliverables: form.deliverables.trim(),
@@ -72,10 +77,22 @@ export default function SellerDashboard() {
       priceFloor: parsePrice(form.priceFloor) ?? 0,
       deliveryDays: parsePrice(form.deliveryDays) ?? 0,
     }
-    setListings(editingId ? listings.map((l) => (l.id === editingId ? listing : l)) : [listing, ...listings])
-    setSaved(editingId ? 'updated' : 'added')
-    setForm(emptyForm)
-    setEditingId(null)
+
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      if (editingId) await api.updateSellerListing(editingId, input)
+      else await api.createSellerListing(input)
+      setSaved(editingId ? 'updated' : 'added')
+      setForm(emptyForm)
+      setEditingId(null)
+      listings.reload()
+      activeRequest.reload()
+    } catch (err) {
+      setSubmitError(errorMessage(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const err = (key: keyof Form) => ({
@@ -99,7 +116,7 @@ export default function SellerDashboard() {
       {active && (
         <div className="notice notice-warning" role="status">
           You have an active negotiation (round {active.round} of {active.maxRounds}). Other buyers cannot start one
-          with you until it ends. <Link to={`/negotiations/${DEMO_NEGOTIATION_ID}`}>Open negotiation</Link>
+          with you until it ends.
         </div>
       )}
 
@@ -157,10 +174,15 @@ export default function SellerDashboard() {
               Listing {saved}.
             </div>
           )}
+          {submitError && (
+            <div className="notice notice-danger" role="alert">
+              Your listing was not saved. {submitError}
+            </div>
+          )}
 
           <div className="dash-form-actions">
-            <button type="submit" className="btn btn-primary btn-lg">
-              {editingId ? 'Save changes' : 'Add listing'}
+            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+              {submitting ? 'Saving...' : editingId ? 'Save changes' : 'Add listing'}
             </button>
             {editingId && (
               <button type="button" className="btn btn-secondary btn-lg" onClick={reset}>
@@ -175,48 +197,52 @@ export default function SellerDashboard() {
             <h2 className="card-title">My listings</h2>
             <p className="muted small">Prices cannot be changed on a listing while it is being negotiated.</p>
           </div>
-          {listings.length === 0 && <p className="dash-empty">No listings yet.</p>}
-          {listings.map((l) => {
-            const negotiated = active?.listingId === l.id
-            return (
-              <div key={l.id} className="dash-item">
-                <div className="dash-item-main">
-                  <div className="dash-item-tags">
-                    <Badge tone="info">{l.category}</Badge>
-                    {active && (
-                      <Badge tone="warning">
-                        <LockIcon size={12} />
-                        {negotiated ? 'In negotiation' : 'Locked'}
-                      </Badge>
-                    )}
+          {listings.error != null && <ErrorCard error={listings.error} onRetry={listings.reload} />}
+          {listings.error == null && !listings.data && <LoadingCard label="Loading your listings..." />}
+          {listings.error == null && listings.data?.length === 0 && <p className="dash-empty">No listings yet.</p>}
+          {listings.error == null &&
+            listings.data?.map((l) => {
+              const negotiated = active?.listingId === l.id
+              return (
+                <div key={l.id} className="dash-item">
+                  <div className="dash-item-main">
+                    <div className="dash-item-tags">
+                      <Badge tone="info">{l.category}</Badge>
+                      {active && (
+                        <Badge tone="warning">
+                          <LockIcon size={12} />
+                          {negotiated ? 'In negotiation' : 'Locked'}
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="dash-item-title">{l.title}</h3>
+                    <p className="dash-item-meta">{l.deliverables}</p>
+                    <p className="dash-item-meta">Delivery in {l.deliveryDays} days</p>
                   </div>
-                  <h3 className="dash-item-title">{l.title}</h3>
-                  <p className="dash-item-meta">{l.deliverables}</p>
-                  <p className="dash-item-meta">Delivery in {l.deliveryDays} days</p>
-                </div>
-                <div className="dash-item-side">
-                  <div className="dash-item-price">
-                    <div className="muted caption">List price</div>
-                    <div className="dash-item-amount">{usd(l.listPrice)}</div>
-                    <div className="muted caption">Your floor {usd(l.priceFloor)} (private)</div>
+                  <div className="dash-item-side">
+                    <div className="dash-item-price">
+                      <div className="muted caption">List price</div>
+                      <div className="dash-item-amount">{usd(l.listPrice)}</div>
+                      <div className="muted caption">Your floor {usd(l.priceFloor)} (private)</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-lg"
+                      disabled={negotiated}
+                      onClick={() => {
+                        setForm(toForm(l))
+                        setErrors({})
+                        setEditingId(l.id)
+                        setSaved(null)
+                        setSubmitError(null)
+                      }}
+                    >
+                      {negotiated ? 'Editing locked' : 'Edit'}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-lg"
-                    disabled={negotiated}
-                    onClick={() => {
-                      setForm(toForm(l))
-                      setErrors({})
-                      setEditingId(l.id)
-                      setSaved(null)
-                    }}
-                  >
-                    {negotiated ? 'Editing locked' : 'Edit'}
-                  </button>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
         </section>
       </div>
     </div>

@@ -1,5 +1,5 @@
 // Shapes shared by the Search, Negotiation and NoAgreement screens.
-// When the API exists, these should match its responses.
+// These match the responses described in docs/API.md.
 
 export type Listing = {
   id: string
@@ -27,11 +27,14 @@ export type Offer = {
 }
 
 export type ChatMessage =
-  | { id: string; from: Role; time: string; text: string }
+  | { id: string; from: Role; /** ISO 8601 time */ sentAt: string; text: string }
   | { id: string; from: 'system'; tone: 'note' | 'warning'; text: string }
+
+export type NegotiationStatus = 'active' | 'agreed' | 'no_agreement'
 
 export type Negotiation = {
   id: string
+  status: NegotiationStatus
   service: string
   sellerName: string
   listPrice: number
@@ -39,10 +42,11 @@ export type Negotiation = {
   maxRounds: number
   /** Only the buyer's own limits are ever sent to the buyer's browser. */
   buyerLimits: { target: number; max: number }
+  /** Set when `status` is "agreed", otherwise null. */
+  agreedPrice: number | null
   offers: Offer[]
   /** Whose counter-offer is awaited right now. */
   waitingOn: Role | null
-  messages: ChatMessage[]
 }
 
 export type RematchSuggestion = {
@@ -59,4 +63,15 @@ export type EndedSession = {
   sellerName: string
   rounds: { round: number; buyer: number; seller: number }[]
   rematches: RematchSuggestion[]
+}
+
+export type SearchSort = 'match' | 'price' | 'delivery'
+
+export type SearchQuery = {
+  keyword: string
+  /** Empty string means every category. */
+  category: string
+  /** Null means no limit. */
+  maxPrice: number | null
+  sort: SearchSort
 }

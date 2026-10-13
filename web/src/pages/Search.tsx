@@ -1,51 +1,47 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { api } from '../api'
 import ServiceCard from '../components/ServiceCard'
+import StartNotice from '../components/StartNotice'
+import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { SearchIcon } from '../components/icons'
-import { categories, DEMO_NEGOTIATION_ID, listings } from '../data/mock'
-import type { Listing } from '../types/marketplace'
+import { useAsync } from '../hooks/useAsync'
+import { useStartNegotiation } from '../hooks/useStartNegotiation'
+import { categories } from '../lib/categories'
+import { parsePrice } from '../lib/forms'
+import type { SearchSort } from '../types/marketplace'
 
 type Filters = { keyword: string; category: string; maxPrice: string }
-type Sort = 'match' | 'price' | 'delivery'
-
-function applyFilters(items: Listing[], f: Filters, sort: Sort): Listing[] {
-  const kw = f.keyword.trim().toLowerCase()
-  const max = Number(f.maxPrice.replace(/[^0-9.]/g, ''))
-  const limit = f.maxPrice.trim() && Number.isFinite(max) ? max : Infinity
-
-  const out = items.filter(
-    (l) =>
-      (!kw || `${l.title} ${l.description} ${l.sellerName} ${l.tags.join(' ')}`.toLowerCase().includes(kw)) &&
-      l.categories.includes(f.category) &&
-      l.listPrice <= limit,
-  )
-  if (sort === 'price') out.sort((a, b) => a.listPrice - b.listPrice)
-  if (sort === 'delivery') out.sort((a, b) => a.deliveryDays - b.deliveryDays)
-  return out
-}
 
 export default function Search() {
-  const navigate = useNavigate()
+  // The first search matches the demo scenario. Clear the boxes to see everything.
   const [draft, setDraft] = useState<Filters>({ keyword: 'website', category: 'Web development', maxPrice: '500' })
   const [applied, setApplied] = useState(draft)
-  const [sort, setSort] = useState<Sort>('match')
+  const [sort, setSort] = useState<SearchSort>('match')
 
-  const results = useMemo(() => applyFilters(listings, applied, sort), [applied, sort])
+  const search = useAsync(
+    () =>
+      api.searchListings({
+        keyword: applied.keyword.trim(),
+        category: applied.category,
+        maxPrice: parsePrice(applied.maxPrice),
+        sort,
+      }),
+    [applied, sort],
+  )
+  const starter = useStartNegotiation(search.reload)
+
+  const results = search.data ?? []
 
   function submit(e: FormEvent) {
     e.preventDefault()
     setApplied(draft)
   }
 
+  // Pressing the chip that is already active shows every category again.
   function quickFilter(category: string) {
-    const next = { ...draft, category }
+    const next = { ...draft, category: applied.category === category ? '' : category }
     setDraft(next)
     setApplied(next)
-  }
-
-  // TODO: create the negotiation through the API and use the id it returns.
-  function startNegotiation(_listing: Listing) {
-    navigate(`/negotiations/${DEMO_NEGOTIATION_ID}`)
   }
 
   return (
@@ -76,6 +72,7 @@ export default function Search() {
               value={draft.category}
               onChange={(e) => setDraft({ ...draft, category: e.target.value })}
             >
+              <option value="">All categories</option>
               {categories.map((c) => (
                 <option key={c}>{c}</option>
               ))}
@@ -88,6 +85,7 @@ export default function Search() {
               className="input"
               type="text"
               inputMode="numeric"
+              placeholder="No limit"
               value={draft.maxPrice}
               onChange={(e) => setDraft({ ...draft, maxPrice: e.target.value })}
             />
@@ -113,16 +111,50 @@ export default function Search() {
         </div>
       </form>
 
+      {starter.requests.length > 1 && (
+        <div className="field">
+          <label htmlFor="negotiate-with">Negotiate using this request</label>
+          <select
+            id="negotiate-with"
+            className="input"
+            value={starter.selected?.id}
+            onChange={(e) => starter.pick(e.target.value)}
+          >
+            {starter.requests.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {starter.requests.length === 1 && starter.selected && (
+        <p className="muted small">Your agent will negotiate using your request "{starter.selected.title}".</p>
+      )}
+
+      {starter.problem && <StartNotice problem={starter.problem} />}
+
       <div className="search-results-head">
         <h2>
-          {results.length} {results.length === 1 ? 'result' : 'results'}
-          {applied.keyword.trim() && <> for "{applied.keyword.trim()}"</>}
+          {search.data ? (
+            <>
+              {results.length} {results.length === 1 ? 'result' : 'results'}
+              {applied.keyword.trim() && <> for "{applied.keyword.trim()}"</>}
+            </>
+          ) : (
+            'Results'
+          )}
         </h2>
         <div className="search-sort">
           <label htmlFor="sort" className="muted small">
             Sort by
           </label>
-          <select id="sort" className="input input-sm" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+          <select
+            id="sort"
+            className="input input-sm"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SearchSort)}
+          >
             <option value="match">Best match</option>
             <option value="price">List price: low to high</option>
             <option value="delivery">Delivery time</option>
@@ -130,11 +162,21 @@ export default function Search() {
         </div>
       </div>
 
-      <section aria-label="Results" className="search-results">
-        {results.length === 0 && <p className="card muted">No services match. Try a different keyword or a higher price.</p>}
-        {results.map((l) => (
-          <ServiceCard key={l.id} listing={l} onNegotiate={startNegotiation} />
-        ))}
+      <section aria-label="Results" aria-busy={search.loading} className="search-results">
+        {search.error != null && <ErrorCard error={search.error} onRetry={search.reload} />}
+        {search.error == null && search.loading && !search.data && <LoadingCard label="Searching..." />}
+        {search.error == null && search.data && results.length === 0 && (
+          <p className="card muted">No services match. Try a different keyword or a higher price.</p>
+        )}
+        {search.error == null &&
+          results.map((l) => (
+            <ServiceCard
+              key={l.id}
+              listing={l}
+              busy={starter.busyListingId === l.id}
+              onNegotiate={(listing) => void starter.start(listing)}
+            />
+          ))}
       </section>
 
       <p className="muted small">

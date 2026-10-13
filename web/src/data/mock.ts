@@ -1,8 +1,14 @@
-// Sample data from the Day 1 mockups. Replace these functions with API calls
-// once the back end exists; the screens only depend on the types.
-import type { EndedSession, Listing, Negotiation } from '../types/marketplace'
+// The single demo scenario: a buyer negotiating a 5-page website with Maya Santos.
+// It is used only when VITE_USE_MOCK is not "false" (see src/api/mock.ts), for
+// presentations and for working before the back end exists. Screens never import this file.
+import type { ChatMessage, EndedSession, Listing, Negotiation } from '../types/marketplace'
 
 export const DEMO_NEGOTIATION_ID = 'demo'
+
+/** A negotiation id that the demo treats as already ended with no agreement. */
+export const DEMO_ENDED_ID = 'n2'
+
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
 
 export const listings: Listing[] = [
   {
@@ -51,17 +57,17 @@ export const listings: Listing[] = [
   },
 ]
 
-export const categories = ['Web development', 'Design', 'Writing']
-
-export function getNegotiation(id: string): Negotiation {
+export function demoNegotiation(id: string): Negotiation {
   return {
     id,
+    status: 'active',
     service: '5-page business website',
     sellerName: 'Maya Santos',
     listPrice: 500,
     round: 2,
     maxRounds: 3,
     buyerLimits: { target: 350, max: 400 },
+    agreedPrice: null,
     waitingOn: 'seller',
     offers: [
       { round: 1, role: 'buyer', amount: 340, note: 'Opening below the target to leave room to move.' },
@@ -79,23 +85,48 @@ export function getNegotiation(id: string): Negotiation {
         note: 'A small step up with the same scope: 5 pages, contact form, blog.',
       },
     ],
-    messages: [
-      { id: 'm1', from: 'seller', time: '10:42', text: 'Hi! Does the 5-page site include a contact form?' },
-      { id: 'm2', from: 'buyer', time: '10:44', text: 'Yes, plus a simple blog page. I need it by Oct 30.' },
-      { id: 'm3', from: 'seller', time: '10:45', text: 'Great. I can fit both if the scope stays at 5 pages.' },
-      { id: 'm4', from: 'system', tone: 'note', text: 'Scope noted: 5 pages, contact form, blog' },
-      { id: 'm5', from: 'buyer', time: '10:47', text: 'Can we just agree on $300 here?' },
-      {
-        id: 'm6',
-        from: 'system',
-        tone: 'warning',
-        text: "Prices can't be changed in chat. Your agent makes offers through the negotiation.",
-      },
+  }
+}
+
+/** The ended negotiation, as the negotiation endpoint reports it. */
+export function demoEndedNegotiation(id: string): Negotiation {
+  return {
+    id,
+    status: 'no_agreement',
+    service: '5-page business website',
+    sellerName: 'Maya Santos',
+    listPrice: 500,
+    round: 3,
+    maxRounds: 3,
+    buyerLimits: { target: 350, max: 400 },
+    agreedPrice: null,
+    waitingOn: null,
+    offers: [
+      { round: 1, role: 'buyer', amount: 240, note: 'Opening low.' },
+      { round: 1, role: 'seller', amount: 500, note: 'Starting at the list price.' },
+      { round: 2, role: 'buyer', amount: 270, note: 'A small step up.' },
+      { round: 2, role: 'seller', amount: 460, note: 'A small concession.' },
+      { round: 3, role: 'buyer', amount: 300, note: 'Final offer.' },
+      { round: 3, role: 'seller', amount: 420, note: 'Final offer.' },
     ],
   }
 }
 
-export function getEndedSession(id: string): EndedSession {
+export const demoMessages: ChatMessage[] = [
+  { id: 'm1', from: 'seller', sentAt: minutesAgo(25), text: 'Hi! Does the 5-page site include a contact form?' },
+  { id: 'm2', from: 'buyer', sentAt: minutesAgo(23), text: 'Yes, plus a simple blog page. I need it by Oct 30.' },
+  { id: 'm3', from: 'seller', sentAt: minutesAgo(22), text: 'Great. I can fit both if the scope stays at 5 pages.' },
+  { id: 'm4', from: 'system', tone: 'note', text: 'Scope noted: 5 pages, contact form, blog' },
+  { id: 'm5', from: 'buyer', sentAt: minutesAgo(20), text: 'Can we just agree on $300 here?' },
+  {
+    id: 'm6',
+    from: 'system',
+    tone: 'warning',
+    text: "Prices can't be changed in chat. Your agent makes offers through the negotiation.",
+  },
+]
+
+export function demoEndedSession(id: string): EndedSession {
   return {
     id,
     service: '5-page business website',

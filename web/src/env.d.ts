@@ -1,0 +1,15 @@
+/// <reference types="vite/client" />
+
+// Settings read from web/.env. See web/.env.example and docs/API.md.
+interface ImportMetaEnv {
+  /** "false" talks to the real API. Anything else uses the built-in demo data. */
+  readonly VITE_USE_MOCK?: string
+  /** Where the API lives. Defaults to "/api". */
+  readonly VITE_API_URL?: string
+  /** Polling interval in milliseconds. Defaults to 3000. */
+  readonly VITE_POLL_MS?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}

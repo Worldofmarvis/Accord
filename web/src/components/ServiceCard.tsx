@@ -3,10 +3,15 @@ import { LockIcon } from './icons'
 import { usd } from '../lib/format'
 import type { Listing } from '../types/marketplace'
 
-type Props = { listing: Listing; onNegotiate: (listing: Listing) => void }
+type Props = {
+  listing: Listing
+  onNegotiate: (listing: Listing) => void
+  /** True while the negotiation is being created. */
+  busy?: boolean
+}
 
 // One search result. A locked seller already has an active negotiation (rule 3).
-export default function ServiceCard({ listing, onNegotiate }: Props) {
+export default function ServiceCard({ listing, onNegotiate, busy = false }: Props) {
   return (
     <article className="card service-card">
       <div className="service-card-body">
@@ -38,8 +43,8 @@ export default function ServiceCard({ listing, onNegotiate }: Props) {
             In negotiation with another buyer
           </button>
         ) : (
-          <button type="button" className="btn btn-primary btn-lg" onClick={() => onNegotiate(listing)}>
-            Negotiate
+          <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(listing)}>
+            {busy ? 'Starting...' : 'Negotiate'}
           </button>
         )}
       </div>

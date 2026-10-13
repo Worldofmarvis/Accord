@@ -1,4 +1,5 @@
-// Sample data for the dashboards. Replace with API calls later.
+// Demo data for the dashboards. Part of the single demo scenario in ./mock.ts and
+// used only through src/api/mock.ts. Screens never import this file.
 import type {
   BuyerNegotiationRow,
   BuyerRequest,
@@ -33,7 +34,7 @@ export const buyerNegotiations: BuyerNegotiationRow[] = [
     id: 'n2',
     service: 'WordPress site fix and redesign',
     sellerName: 'Lucas Moreau',
-    status: 'no-agreement',
+    status: 'no_agreement',
     round: 3,
     maxRounds: 3,
     buyerOffer: 300,
@@ -64,6 +65,7 @@ export const initialSellerListings: SellerListing[] = [
 
 // The seller has one active negotiation (rule 3), so every listing is locked for other buyers.
 export const sellerActiveNegotiation: SellerActiveNegotiation | null = {
+  negotiationId: 'n1',
   listingId: 'l1',
   round: 2,
   maxRounds: 3,

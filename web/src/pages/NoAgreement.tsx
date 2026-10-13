@@ -1,16 +1,37 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { api } from '../api'
 import Badge from '../components/Badge'
+import StartNotice from '../components/StartNotice'
+import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { CloseIcon } from '../components/icons'
-import { DEMO_NEGOTIATION_ID, getEndedSession } from '../data/mock'
+import { useAsync } from '../hooks/useAsync'
+import { useStartNegotiation } from '../hooks/useStartNegotiation'
 import { usd } from '../lib/format'
 
 const matchLabels = ['Best match', '2nd match', '3rd match']
 
 export default function NoAgreement() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
-  // TODO: load from the API. `rematches` should come back already ranked.
-  const s = getEndedSession(id)
+  const outcome = useAsync(() => api.getOutcome(id), [id])
+  const starter = useStartNegotiation()
+
+  if (outcome.error != null) {
+    return (
+      <div className="page-stack">
+        <ErrorCard error={outcome.error} onRetry={outcome.reload} />
+      </div>
+    )
+  }
+  if (!outcome.data) {
+    return (
+      <div className="page-stack">
+        <LoadingCard label="Loading what happened..." />
+      </div>
+    )
+  }
+
+  // `rematches` come back already ranked, best first (docs/API.md).
+  const s = outcome.data
   const last = s.rounds[s.rounds.length - 1]
 
   const reasons = [
@@ -21,7 +42,7 @@ export default function NoAgreement() {
     {
       title: 'The final offers did not meet',
       body: 'Each agent made its best offer in Round 3.',
-      extra: (
+      extra: last && (
         <div className="ended-offers">
           <div className="ended-offer ended-offer-buyer">
             <div className="muted caption">Your last offer</div>
@@ -92,7 +113,10 @@ export default function NoAgreement() {
                   const final = r.round === last.round
                   return (
                     <tr key={r.round} className={final ? 'is-final' : undefined}>
-                      <th scope="row">Round {r.round}{final && ' (final)'}</th>
+                      <th scope="row">
+                        Round {r.round}
+                        {final && ' (final)'}
+                      </th>
                       <td>{usd(r.buyer)}</td>
                       <td>{usd(r.seller)}</td>
                     </tr>
@@ -105,9 +129,19 @@ export default function NoAgreement() {
 
         <section aria-label="Rematch suggestions" className="ended-right">
           <div>
-            <h2>We found {s.rematches.length} other sellers</h2>
-            <p className="muted small">Ranked by how well they match your request. Start one with a single click.</p>
+            <h2>
+              {s.rematches.length > 0
+                ? `We found ${s.rematches.length} other ${s.rematches.length === 1 ? 'seller' : 'sellers'}`
+                : 'No other sellers match yet'}
+            </h2>
+            <p className="muted small">
+              {s.rematches.length > 0
+                ? 'Ranked by how well they match your request. Start one with a single click.'
+                : 'Try a new search, or change your request.'}
+            </p>
           </div>
+
+          {starter.problem && <StartNotice problem={starter.problem} />}
 
           {s.rematches.map((m, i) => (
             <article key={m.listingId} className="card rematch-card">
@@ -127,13 +161,13 @@ export default function NoAgreement() {
                   <li key={r}>{r}</li>
                 ))}
               </ul>
-              {/* TODO: create the negotiation through the API and use the id it returns. */}
               <button
                 type="button"
                 className={`btn btn-lg ${i === 0 ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => navigate(`/negotiations/${DEMO_NEGOTIATION_ID}`)}
+                disabled={starter.busyListingId === m.listingId}
+                onClick={() => void starter.start({ id: m.listingId, sellerName: m.sellerName })}
               >
-                Start negotiation
+                {starter.busyListingId === m.listingId ? 'Starting...' : 'Start negotiation'}
               </button>
             </article>
           ))}

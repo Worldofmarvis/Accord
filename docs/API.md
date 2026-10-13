@@ -1,6 +1,8 @@
 # API contract (draft)
 
-**Status: proposal.** This is what the front end expects, based on `web/src/types/marketplace.ts` and `web/src/types/dashboard.ts`. The front end and back end owners should go through the "Questions to agree on" section, edit this file until both sides agree, and then the front-end types will be changed to match.
+**Status: proposal, built against by the front end.** The front end now talks to this API through `web/src/api/` (see "How the front end connects" at the bottom). Anything the back end changes must be changed here too, and the front end will follow.
+
+The front end and back end owners should go through "Questions to agree on". Each question has a **front end default**: the front end is built on that default, so if the back end agrees, nothing needs to change.
 
 ## Conventions
 
@@ -60,8 +62,8 @@
 
 | Method and path | Purpose | Response |
 |---|---|---|
-| `GET /api/listings?keyword=&category=&maxPrice=&sort=` | Search. `sort` is `match`, `price` or `delivery`. | `Listing[]` |
-| `POST /api/negotiations` body `{ "listingId": "l1", "requestId": "r1" }` | Start a negotiation. | `201 { "id": "n1" }`. `409 SELLER_LOCKED` if the seller already has an active negotiation. |
+| `GET /api/listings?keyword=&category=&maxPrice=&sort=` | Search. All parameters are optional (empty `category` means every category). `sort` is `match`, `price` or `delivery`. | `Listing[]` |
+| `POST /api/negotiations` body `{ "listingId": "l1", "requestId": "r1" }` | Start a negotiation. `requestId` is required: the buyer's target and max come from that request. Also used by "Start negotiation" on the rematch screen. | `201 { "id": "n1" }`. `409 SELLER_LOCKED` if the seller already has an active negotiation. |
 
 ### Live negotiation (buyer view)
 
@@ -78,16 +80,17 @@
   "maxRounds": 3,
   "waitingOn": "seller",           // "buyer" | "seller" | null
   "buyerLimits": { "target": 350, "max": 400 },   // the caller's own limits only
+  "agreedPrice": null,             // a number when status is "agreed", otherwise null
   "offers": [ /* Offer[] */ ]
 }
 ```
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/negotiations/:id/messages` | `ChatMessage[]`, oldest first. Supports `?after=<messageId>` for polling. |
-| `POST /api/negotiations/:id/messages` body `{ "text": "..." }` | Send a chat message. Returns the stored message, plus a `system` warning message if the text looks like a price. |
+| `GET /api/negotiations/:id/messages` | `ChatMessage[]`, oldest first. Supports `?after=<messageId>` to return only newer messages. |
+| `POST /api/negotiations/:id/messages` body `{ "text": "..." }` | Send a chat message. Returns a **list**: the stored message, followed by a `system` warning message if the text looks like a price. `ROUND_LIMIT` or `FORBIDDEN` errors use the error shape above. |
 
-The front end will poll `GET /api/negotiations/:id` every few seconds until you offer something better (see questions).
+The front end calls `GET /api/negotiations/:id` every 3 seconds while `status` is `active`, and stops when it is `agreed` or `no_agreement`. It then moves the buyer to `/negotiations/:id/pay` (agreed) or `/negotiations/:id/no-agreement`. The chat polls `GET .../messages?after=<last id>` the same way.
 
 ### Session ended
 
@@ -111,39 +114,51 @@ The front end will poll `GET /api/negotiations/:id` every few seconds until you 
 | Method and path | Body or response |
 |---|---|
 | `GET /api/buyer/requests` | `BuyerRequest[]`: `{ id, title, category, deliverables, deadline, target, max }` |
-| `POST /api/buyer/requests` | Same fields without `id`. Validation: `max >= target`, deadline not in the past. |
-| `GET /api/buyer/negotiations` | `{ id, service, sellerName, status, round, maxRounds, buyerOffer, sellerOffer }[]` |
+| `POST /api/buyer/requests` | Same fields without `id`. Returns the stored request. Validation: `max >= target`, deadline not in the past (`400 VALIDATION`). |
+| `GET /api/buyer/negotiations` | `{ id, service, sellerName, status, round, maxRounds, buyerOffer, sellerOffer }[]`. `status` is `active`, `agreed` or `no_agreement`. |
 
 ### Seller dashboard
 
 | Method and path | Body or response |
 |---|---|
 | `GET /api/seller/listings` | `SellerListing[]`: `{ id, title, category, deliverables, listPrice, priceFloor, deliveryDays }` |
-| `POST /api/seller/listings` | Same fields without `id`. Validation: `priceFloor <= listPrice`. |
-| `PUT /api/seller/listings/:id` | Same fields. `409` if the listing is in an active negotiation. |
+| `POST /api/seller/listings` | Same fields without `id`. Returns the stored listing. Validation: `priceFloor <= listPrice` (`400 VALIDATION`). |
+| `PUT /api/seller/listings/:id` | Same fields. Returns the stored listing. `409 SELLER_LOCKED` if the listing is in an active negotiation. |
 | `GET /api/seller/active-negotiation` | `{ "negotiationId": "n1", "listingId": "l1", "round": 2, "maxRounds": 3 }` or `null` |
+
+The seller's own view of a negotiation (their limits, their agent) is **not designed yet**, so the front end does not link sellers to `/negotiations/:id`.
 
 ### Not defined yet
 
-- Approve and pay (PayPal sandbox): `/negotiations/:id/pay` is a front-end route, but the approve and capture endpoints still need to be agreed.
+- Approve and pay (PayPal sandbox): `/negotiations/:id/pay` is a front-end route, but the approve and capture endpoints still need to be agreed (Day 5).
 - Login and roles (see questions).
-
-## Differences from the current front-end types
-
-When this is agreed, the front end will change these:
-
-1. `ChatMessage.time` (`"10:42"`) becomes `sentAt` (ISO string), formatted by the browser.
-2. `Negotiation` gains `status`.
-3. `Negotiation.id` is no longer `demo`. All links will use the id returned by `POST /api/negotiations`.
-4. `buyerLimits` stays for the buyer view. A seller view of the negotiation is not designed yet.
 
 ## Questions to agree on
 
-- [ ] **Login:** how does the browser prove who it is (cookie, token)? How do we know if the user is a buyer or a seller?
-- [ ] **Updates:** polling every ___ seconds, or WebSockets or server-sent events?
-- [ ] **Money:** whole dollars, as proposed, or cents?
-- [ ] **Round rules:** who goes first in each round, and does the engine move to the next round on its own?
-- [ ] **Rematch ranking:** does the API rank rematches, or does the front end?
-- [ ] **Deal reached:** what does the API return when both agents agree, and which endpoint does the buyer call to approve?
-- [ ] **CORS and base URL:** the front end will read the API address from `VITE_API_URL` in `.env`.
-- [ ] **Limits on messages:** maximum chat message length, and rate limit.
+Tick the box when the back end agrees, or edit the answer.
+
+| | Question | Front end default (built on this) |
+|---|---|---|
+| [ ] | **Login:** how does the browser prove who it is, and how do we know buyer from seller? | A session cookie set by the back end. The front end sends `credentials: "include"` and expects `401 UNAUTHENTICATED` when signed out. The role comes from the account, not from the URL. There is no login screen yet. |
+| [ ] | **Updates:** polling, WebSockets or server-sent events? | Polling every **3 seconds** for the negotiation and the chat. Upgrade chat to server-sent events or WebSockets on Day 4 if it feels slow. |
+| [ ] | **Money:** whole dollars or cents? | Whole dollars (integers). |
+| [ ] | **Round rules:** who goes first in each round, and does the engine move to the next round by itself? | The buyer agent goes first, then the seller agent. The engine moves to the next round on its own once both offers are stored. The front end only reads `round`, `waitingOn` and `status`. |
+| [ ] | **Rematch ranking:** does the API rank rematches, or does the front end? | The API ranks them (best first, at most 3). The front end shows them in the order received. |
+| [ ] | **Deal reached:** what does the API return when both agents agree, and which endpoint does the buyer call to approve? | `status` becomes `agreed` and `agreedPrice` is set. The front end then opens `/negotiations/:id/pay`. The approve and capture endpoints are agreed on Day 5. |
+| [ ] | **Which request does a negotiation use?** | The buyer picks one of their saved requests (the first by default) and the front end sends its `requestId` in `POST /api/negotiations`. A buyer without a request is sent to the buyer dashboard first. |
+| [ ] | **CORS and base URL:** | In development the front end calls `/api` on its own address and Vite forwards it to the back end (`API_PROXY_TARGET`), so no CORS is needed. In production set `VITE_API_URL` and enable CORS with credentials. |
+| [ ] | **Limits on messages:** maximum length and rate limit. | Front end stops at 500 characters. Back end should enforce its own limit and answer `400 VALIDATION`. |
+
+## How the front end connects
+
+All server calls live in `web/src/api/`. Screens never call `fetch` directly and never import sample data.
+
+| Setting (`web/.env`) | Meaning |
+|---|---|
+| `VITE_USE_MOCK=true` | Use the built-in demo data (one scenario, in memory). **This is the default**, so the app runs before the back end exists. |
+| `VITE_USE_MOCK=false` | Use the real API. |
+| `VITE_API_URL=/api` | Where the API lives. |
+| `API_PROXY_TARGET=http://localhost:3000` | Development only: where Vite forwards `/api`. |
+| `VITE_POLL_MS=3000` | Polling interval. |
+
+Copy `web/.env.example` to `web/.env` and edit it.

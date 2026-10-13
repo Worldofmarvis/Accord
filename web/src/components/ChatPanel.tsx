@@ -1,34 +1,44 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { errorMessage } from '../api'
+import { useChat } from '../hooks/useChat'
+import { formatTime } from '../lib/format'
 import { LockIcon } from './icons'
-import type { ChatMessage } from '../types/marketplace'
 
-type Props = { sellerName: string; initialMessages: ChatMessage[] }
+type Props = { negotiationId: string; sellerName: string }
 
-// Looks like the buyer is trying to set a price in chat.
-const PRICE_PATTERN = /\$\s?\d|\b\d+\s?(usd|dollars)\b/i
+const MAX_LENGTH = 500
 
-const PRICE_WARNING = "Prices can't be changed in chat. Your agent makes offers through the negotiation."
-
-const nowLabel = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-
-// Chat is for scope only (rule 4). The warning here is a courtesy hint:
-// the back end must still ignore chat text when it decides prices.
-export default function ChatPanel({ sellerName, initialMessages }: Props) {
-  const [messages, setMessages] = useState(initialMessages)
+// Chat is for scope only (rule 5). Messages go to the API as plain text and the
+// server decides whether to add a warning: this component never judges the text.
+export default function ChatPanel({ negotiationId, sellerName }: Props) {
+  const { messages, loading, error, send } = useChat(negotiationId)
   const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const logRef = useRef<HTMLDivElement>(null)
   const firstName = sellerName.split(' ')[0]
 
-  function send(e: FormEvent) {
+  // Keep the newest message in view.
+  useEffect(() => {
+    const log = logRef.current
+    if (log) log.scrollTop = log.scrollHeight
+  }, [messages.length])
+
+  async function submit(e: FormEvent) {
     e.preventDefault()
     const text = draft.trim()
-    if (!text) return
-    const stamp = Date.now()
-    const next: ChatMessage[] = [{ id: `u-${stamp}`, from: 'buyer', time: nowLabel(), text }]
-    if (PRICE_PATTERN.test(text)) {
-      next.push({ id: `w-${stamp}`, from: 'system', tone: 'warning', text: PRICE_WARNING })
+    if (!text || sending) return
+    setSending(true)
+    setSendError(null)
+    try {
+      await send(text)
+      setDraft('')
+    } catch (err) {
+      // Keep the draft so nothing is lost.
+      setSendError(errorMessage(err))
+    } finally {
+      setSending(false)
     }
-    setMessages((prev) => [...prev, ...next])
-    setDraft('')
   }
 
   return (
@@ -46,7 +56,11 @@ export default function ChatPanel({ sellerName, initialMessages }: Props) {
         <span>You can discuss scope here. Chat can never change the price. Only the negotiation engine does that.</span>
       </div>
 
-      <div className="chat-log" role="log" aria-live="polite">
+      <div className="chat-log" role="log" aria-live="polite" ref={logRef}>
+        {loading && messages.length === 0 && <div className="chat-system chat-system-note">Loading messages...</div>}
+        {!loading && error != null && messages.length === 0 && (
+          <div className="chat-system chat-system-warning">{errorMessage(error)}</div>
+        )}
         {messages.map((m) => {
           if (m.from === 'system') {
             return (
@@ -59,7 +73,7 @@ export default function ChatPanel({ sellerName, initialMessages }: Props) {
           return (
             <div key={m.id} className={`chat-msg ${mine ? 'is-mine' : ''}`}>
               <div className="muted caption chat-meta">
-                {mine ? 'You' : `${firstName}, seller`}. {m.time}
+                {mine ? 'You' : `${firstName}, seller`}. {formatTime(m.sentAt)}
               </div>
               <div className="chat-bubble">{m.text}</div>
             </div>
@@ -67,7 +81,7 @@ export default function ChatPanel({ sellerName, initialMessages }: Props) {
         })}
       </div>
 
-      <form className="chat-form" onSubmit={send}>
+      <form className="chat-form" onSubmit={submit}>
         <label htmlFor="chat-msg" className="sr-only">
           Message about scope
         </label>
@@ -76,13 +90,22 @@ export default function ChatPanel({ sellerName, initialMessages }: Props) {
           className="input chat-input"
           type="text"
           placeholder="Message about scope..."
+          maxLength={MAX_LENGTH}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
-        <button type="submit" className="btn btn-primary btn-lg">
-          Send
+        <button type="submit" className="btn btn-primary btn-lg" disabled={sending || !draft.trim()}>
+          {sending ? 'Sending...' : 'Send'}
         </button>
       </form>
+      {sendError && (
+        <p className="field-error chat-foot" role="alert">
+          Your message was not sent. {sendError}
+        </p>
+      )}
+      {error != null && messages.length > 0 && !sendError && (
+        <p className="muted caption chat-foot">We can't refresh the chat right now. Trying again...</p>
+      )}
       <div className="muted caption chat-foot">Messages are saved with this negotiation.</div>
     </section>
   )
