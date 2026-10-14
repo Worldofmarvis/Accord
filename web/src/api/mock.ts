@@ -51,6 +51,12 @@ const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that ne
 const isKnownNegotiation = (id: string) => id === DEMO_NEGOTIATION_ID || id === DEMO_ENDED_ID || id === 'n1'
 
 export const mockApi: Api = {
+  async getMe() {
+    await delay(100)
+    // The demo person can both buy and sell, so the "Viewing as" switch is shown.
+    return { id: 'demo-user', name: 'Alex Morgan', roles: ['buyer', 'seller'] }
+  },
+
   async searchListings(q) {
     await delay()
     return filterListings(listings, q)

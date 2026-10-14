@@ -6,6 +6,8 @@ const enc = encodeURIComponent
 
 // The real back end. Endpoints are described in docs/API.md.
 export const realApi: Api = {
+  getMe: () => request('/me'),
+
   searchListings: (q) =>
     request('/listings', {
       query: { keyword: q.keyword, category: q.category, maxPrice: q.maxPrice, sort: q.sort },

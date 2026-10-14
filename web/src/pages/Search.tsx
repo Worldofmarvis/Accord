@@ -6,6 +6,7 @@ import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { SearchIcon } from '../components/icons'
 import { useAsync } from '../hooks/useAsync'
 import { useStartNegotiation } from '../hooks/useStartNegotiation'
+import { useRole } from '../role/useRole'
 import { categories } from '../lib/categories'
 import { parsePrice } from '../lib/forms'
 import type { SearchSort } from '../types/marketplace'
@@ -28,7 +29,9 @@ export default function Search() {
       }),
     [applied, sort],
   )
-  const starter = useStartNegotiation(search.reload)
+  const { role } = useRole()
+  const isBuyer = role === 'buyer'
+  const starter = useStartNegotiation(search.reload, isBuyer)
 
   const results = search.data ?? []
 
@@ -111,6 +114,12 @@ export default function Search() {
         </div>
       </form>
 
+      {!isBuyer && (
+        <div className="notice notice-warning" role="status">
+          You are viewing as a seller, so you can browse services but not start a negotiation. Switch to Buyer to negotiate.
+        </div>
+      )}
+
       {starter.requests.length > 1 && (
         <div className="field">
           <label htmlFor="negotiate-with">Negotiate using this request</label>
@@ -174,6 +183,7 @@ export default function Search() {
               key={l.id}
               listing={l}
               busy={starter.busyListingId === l.id}
+              canNegotiate={isBuyer}
               onNegotiate={(listing) => void starter.start(listing)}
             />
           ))}

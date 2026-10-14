@@ -58,6 +58,20 @@ The front end and back end owners should go through "Questions to agree on". Eac
 
 ## Endpoints
 
+### Who is the user
+
+This is a feature inside PayPal, so the front end builds **no login screen of its own**. The person is already signed in (through PayPal or a fixed demo user, whichever the back end uses). The front end only asks who they are.
+
+`GET /api/me`
+
+```jsonc
+{ "id": "u1", "name": "Alex Morgan", "roles": ["buyer", "seller"] }   // roles: "buyer" | "seller", one or both
+```
+
+- The front end shows the Buyer pages only if `roles` has `buyer`, and the Seller pages only if it has `seller`. A person with both gets a "Viewing as" switch.
+- `401 UNAUTHENTICATED` means the person is not signed in. The front end shows "Please sign in to continue" and nothing else.
+- This is only for menus. **Every other endpoint must still check the role itself** (privacy rules above): a buyer who opens a seller URL by hand must get `403 FORBIDDEN`, never the data.
+
 ### Search and start
 
 | Method and path | Purpose | Response |
@@ -131,7 +145,7 @@ The seller's own view of a negotiation (their limits, their agent) is **not desi
 ### Not defined yet
 
 - Approve and pay (PayPal sandbox): `/negotiations/:id/pay` is a front-end route, but the approve and capture endpoints still need to be agreed (Day 5).
-- Login and roles (see questions).
+- How the person gets signed in (PayPal sign-in or a fixed demo user). The front end only needs `GET /api/me` to work (see questions).
 
 ## Questions to agree on
 
@@ -139,7 +153,8 @@ Tick the box when the back end agrees, or edit the answer.
 
 | | Question | Front end default (built on this) |
 |---|---|---|
-| [ ] | **Login:** how does the browser prove who it is, and how do we know buyer from seller? | A session cookie set by the back end. The front end sends `credentials: "include"` and expects `401 UNAUTHENTICATED` when signed out. The role comes from the account, not from the URL. There is no login screen yet. |
+| [ ] | **Who is the user?** The front end has no login screen. How does the back end know who is calling, and how do we know buyer from seller? | The person is already signed in (PayPal sign-in, or a fixed demo user). The back end identifies them on every request and answers `GET /api/me` with `{ id, name, roles }`. The front end sends `credentials: "include"` (a session cookie works) and expects `401 UNAUTHENTICATED` when nobody is signed in. If the team wants a real "Log in with PayPal" button, the back end handles the code exchange and the front end only adds the button. |
+| [ ] | **Search on the server:** does `GET /api/listings` filter and sort? | Yes. The front end sends `keyword`, `category`, `maxPrice` and `sort` and shows exactly what comes back. If the back end ignores them, the page still loads but never filters, so please confirm. |
 | [ ] | **Updates:** polling, WebSockets or server-sent events? | Polling every **3 seconds** for the negotiation and the chat. Upgrade chat to server-sent events or WebSockets on Day 4 if it feels slow. |
 | [ ] | **Money:** whole dollars or cents? | Whole dollars (integers). |
 | [ ] | **Round rules:** who goes first in each round, and does the engine move to the next round by itself? | The buyer agent goes first, then the seller agent. The engine moves to the next round on its own once both offers are stored. The front end only reads `round`, `waitingOn` and `status`. |

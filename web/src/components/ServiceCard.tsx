@@ -8,10 +8,12 @@ type Props = {
   onNegotiate: (listing: Listing) => void
   /** True while the negotiation is being created. */
   busy?: boolean
+  /** False when the person is viewing as a seller: they can browse but not negotiate. */
+  canNegotiate?: boolean
 }
 
 // One search result. A locked seller already has an active negotiation (rule 3).
-export default function ServiceCard({ listing, onNegotiate, busy = false }: Props) {
+export default function ServiceCard({ listing, onNegotiate, busy = false, canNegotiate = true }: Props) {
   return (
     <article className="card service-card">
       <div className="service-card-body">
@@ -41,6 +43,10 @@ export default function ServiceCard({ listing, onNegotiate, busy = false }: Prop
         {listing.locked ? (
           <button type="button" className="btn btn-lg" disabled>
             In negotiation with another buyer
+          </button>
+        ) : !canNegotiate ? (
+          <button type="button" className="btn btn-lg" disabled>
+            Buyers only
           </button>
         ) : (
           <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(listing)}>

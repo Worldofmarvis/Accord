@@ -6,6 +6,7 @@ import type {
   SellerActiveNegotiation,
   SellerListing,
 } from '../types/dashboard'
+import type { Me } from '../types/me'
 import type { ChatMessage, EndedSession, Listing, Negotiation, SearchQuery } from '../types/marketplace'
 
 /**
@@ -14,6 +15,9 @@ import type { ChatMessage, EndedSession, Listing, Negotiation, SearchQuery } fro
  * The endpoints are described in docs/API.md.
  */
 export interface Api {
+  // Who is signed in
+  getMe(): Promise<Me>
+
   // Search and start
   searchListings(query: SearchQuery): Promise<Listing[]>
   startNegotiation(input: { listingId: string; requestId: string }): Promise<{ id: string }>

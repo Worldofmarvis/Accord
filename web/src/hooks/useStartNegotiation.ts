@@ -15,10 +15,12 @@ export type StartProblem =
  * loads the buyer's requests and uses the one picked, or the first. On success it opens the
  * new negotiation. If the seller got locked in the meantime, the server answers
  * SELLER_LOCKED and `problem` says so; `onLocked` lets the screen refresh its list.
+ * With `enabled` false (the person is viewing as a seller) nothing is loaded.
  */
-export function useStartNegotiation(onLocked?: () => void) {
+export function useStartNegotiation(onLocked?: () => void, enabled = true) {
   const navigate = useNavigate()
-  const requests = useAsync(() => api.listBuyerRequests(), [])
+  // Only buyers have requests, so a seller viewing the page never asks for them.
+  const requests = useAsync(() => (enabled ? api.listBuyerRequests() : Promise.resolve([])), [enabled])
   const [pickedId, setPickedId] = useState<string>()
   const [busyListingId, setBusyListingId] = useState<string | null>(null)
   const [problem, setProblem] = useState<StartProblem | null>(null)
