@@ -13,6 +13,8 @@ export type Listing = {
   deliveryDays: number
   /** True while another buyer has an active negotiation with this seller. */
   locked: boolean
+  /** True when the signed-in person owns it. A person can't negotiate with themselves. */
+  mine: boolean
 }
 
 export type Role = 'buyer' | 'seller'
@@ -51,6 +53,24 @@ export type Negotiation = {
   offers: Offer[]
   /** Whose counter-offer is awaited right now. */
   waitingOn: Role | null
+}
+
+/** One side's answer to the agreed price. Final once it is "approved" or "declined". */
+export type Decision = 'pending' | 'approved' | 'declined'
+
+/** The deal as a whole: "approved" only when both sides approved, "declined" as soon as either side declines. */
+export type ApprovalStatus = 'pending' | 'approved' | 'declined'
+
+/**
+ * Both humans' decisions on an agreed price. Shared state: the buyer and the seller see the same
+ * object, and payment stays locked until `status` is "approved". Not private (unlike limits).
+ */
+export type DealApproval = {
+  negotiationId: string
+  agreedPrice: number
+  buyer: Decision
+  seller: Decision
+  status: ApprovalStatus
 }
 
 export type RematchSuggestion = {

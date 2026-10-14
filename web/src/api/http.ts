@@ -6,6 +6,7 @@ const KNOWN_CODES: ApiErrorCode[] = [
   'NOT_FOUND',
   'FORBIDDEN',
   'SELLER_LOCKED',
+  'REQUEST_LOCKED',
   'ROUND_LIMIT',
   'UNAUTHENTICATED',
 ]

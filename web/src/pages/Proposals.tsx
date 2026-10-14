@@ -4,6 +4,7 @@ import { api, errorMessage, POLL_MS } from '../api'
 import Badge from '../components/Badge'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { useAsync } from '../hooks/useAsync'
+import { refreshIncomingProposals } from '../hooks/useIncomingProposals'
 import { formatDate, usd } from '../lib/format'
 import { useRole } from '../role/useRole'
 import type { Proposal } from '../types/proposal'
@@ -13,31 +14,39 @@ const statusBadge = {
   pending: { tone: 'warning', label: 'Waiting for an answer' },
   accepted: { tone: 'success', label: 'Accepted' },
   declined: { tone: 'neutral', label: 'Declined' },
+  withdrawn: { tone: 'neutral', label: 'Withdrawn' },
 } as const
 
+/** The label for a proposal. One the server closed by itself says why, so it isn't mistaken for a person's answer. */
+function badgeFor(p: Proposal): { tone: 'warning' | 'success' | 'neutral'; label: string } {
+  if (p.status === 'declined' && p.closedReason === 'taken') {
+    return { tone: 'neutral', label: 'Closed: already in another negotiation' }
+  }
+  return statusBadge[p.status]
+}
+
 // Every negotiation starts here: the side that did not start it accepts or declines first.
+// A person who is both buyer and seller only sees the proposals of the side they are viewing.
 export default function Proposals() {
   const { role } = useRole()
   const navigate = useNavigate()
-  const proposals = useAsync(() => api.listProposals(), [role])
+  const proposals = useAsync(() => api.listProposals(role), [role])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
 
-  // While a proposal you sent is waiting, look for the answer every few seconds.
+  // While this page is open, look for new proposals and for answers to yours every few seconds.
   const reloadRef = useRef(proposals.reload)
   useEffect(() => {
     reloadRef.current = proposals.reload
   })
-  const waiting = proposals.data?.some((p) => p.direction === 'outgoing' && p.status === 'pending') ?? false
   useEffect(() => {
-    if (!waiting) return
     const timer = setInterval(() => {
       if (!document.hidden) reloadRef.current()
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [waiting])
+  }, [])
 
-  async function answer(p: Proposal, action: 'accept' | 'decline') {
+  async function answer(p: Proposal, action: 'accept' | 'decline' | 'withdraw') {
     setBusyId(p.id)
     setProblem(null)
     try {
@@ -47,8 +56,10 @@ export default function Proposals() {
           navigate(`/negotiations/${encodeURIComponent(done.negotiationId)}`)
           return
         }
-      } else {
+      } else if (action === 'decline') {
         await api.declineProposal(p.id)
+      } else {
+        await api.withdrawProposal(p.id)
       }
       proposals.reload()
     } catch (e) {
@@ -56,6 +67,7 @@ export default function Proposals() {
       proposals.reload()
     } finally {
       setBusyId(null)
+      refreshIncomingProposals()
     }
   }
 
@@ -63,10 +75,16 @@ export default function Proposals() {
   const needsAnswer = list.filter((p) => p.direction === 'incoming' && p.status === 'pending')
   const rest = list.filter((p) => !needsAnswer.includes(p))
 
+  // Keep the number on the Proposals link in step with this list.
+  const waitingCount = proposals.data ? needsAnswer.length : null
+  useEffect(() => {
+    if (waitingCount !== null) refreshIncomingProposals()
+  }, [waitingCount])
+
   const row = (p: Proposal) => {
     const buyer = role === 'buyer'
     const counterpart = buyer ? p.listing.sellerName : p.request.buyerName
-    const badge = statusBadge[p.status]
+    const badge = badgeFor(p)
     return (
       <div key={p.id} className="dash-item">
         <div className="dash-item-main">
@@ -107,7 +125,17 @@ export default function Proposals() {
             </>
           )}
           {p.status === 'pending' && p.direction === 'outgoing' && (
-            <p className="muted small">Waiting for {counterpart} to answer</p>
+            <>
+              <p className="muted small">Waiting for {counterpart} to answer</p>
+              <button
+                type="button"
+                className="btn btn-secondary btn-lg"
+                disabled={busyId === p.id}
+                onClick={() => void answer(p, 'withdraw')}
+              >
+                Withdraw
+              </button>
+            </>
           )}
           {p.status === 'accepted' && p.negotiationId && (
             <Link to={`/negotiations/${encodeURIComponent(p.negotiationId)}`} className="btn btn-primary btn-lg">
@@ -124,8 +152,9 @@ export default function Proposals() {
       <div>
         <h1>Proposals</h1>
         <p className="muted">
-          A negotiation starts only after the other side accepts. Accepting locks the seller's listing, so it can
-          have one negotiation at a time.
+          A negotiation starts only after the other side accepts. Accepting locks the seller's listing and the
+          buyer's request, so each is in one negotiation at a time, and every other proposal waiting for either
+          of them is closed automatically. You can withdraw a proposal you sent until it is answered.
         </p>
       </div>
 

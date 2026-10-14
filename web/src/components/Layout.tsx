@@ -1,5 +1,6 @@
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { USE_MOCK } from '../api'
+import { useIncomingProposals } from '../hooks/useIncomingProposals'
 import { useRole } from '../role/useRole'
 import type { Role } from '../types/me'
 
@@ -9,14 +10,15 @@ export default function Layout() {
   const { me, role, setRole } = useRole()
   const navigate = useNavigate()
   const canSwitch = me.roles.length > 1
+  const incoming = useIncomingProposals(role)
 
   // The menu only shows the dashboard for the side the person is viewing.
-  const links = [
+  const links: { to: string; label: string; count?: number }[] = [
     { to: '/search', label: 'Search' },
     role === 'buyer'
       ? { to: '/buyer', label: 'Buyer dashboard' }
       : { to: '/seller', label: 'Seller dashboard' },
-    { to: '/proposals', label: 'Proposals' },
+    { to: '/proposals', label: 'Proposals', count: incoming },
   ]
 
   function switchTo(next: Role) {
@@ -33,8 +35,17 @@ export default function Layout() {
         </Link>
         <nav className="shell-nav" aria-label="Main">
           {links.map((l) => (
-            <NavLink key={l.to} to={l.to}>
+            <NavLink
+              key={l.to}
+              to={l.to}
+              aria-label={l.count ? `${l.label}, ${l.count} waiting for your answer` : undefined}
+            >
               {l.label}
+              {l.count ? (
+                <span className="nav-count" aria-hidden="true">
+                  {l.count > 9 ? '9+' : l.count}
+                </span>
+              ) : null}
             </NavLink>
           ))}
         </nav>

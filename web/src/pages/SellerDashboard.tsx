@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, errorMessage } from '../api'
+import { api, errorMessage, POLL_MS } from '../api'
 import Badge from '../components/Badge'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
@@ -8,7 +8,7 @@ import { useAsync } from '../hooks/useAsync'
 import { categories } from '../lib/categories'
 import { parsePrice } from '../lib/forms'
 import { usd } from '../lib/format'
-import type { SellerListing } from '../types/dashboard'
+import type { SellerListing, SellerNegotiationRow } from '../types/dashboard'
 import '../styles/dashboards.css'
 
 type Form = { title: string; category: string; deliverables: string; listPrice: string; priceFloor: string; deliveryDays: string }
@@ -50,6 +50,25 @@ export default function SellerDashboard() {
   const listings = useAsync(() => api.listSellerListings(), [])
   const activeRequest = useAsync(() => api.getSellerActiveNegotiation(), [])
   const active = activeRequest.data ?? null
+  const negotiations = useAsync(() => api.listSellerNegotiations(), [])
+
+  // While something is still moving (a live negotiation, or a deal waiting for approvals), look for
+  // changes every few seconds, so the list and the lock notice follow it all the way to the end.
+  const rows = negotiations.data ?? []
+  const live = active != null || rows.some((r) => r.status === 'active' || (r.status === 'agreed' && r.deal === 'pending'))
+  const reloadRef = useRef({ list: negotiations.reload, active: activeRequest.reload })
+  useEffect(() => {
+    reloadRef.current = { list: negotiations.reload, active: activeRequest.reload }
+  })
+  useEffect(() => {
+    if (!live) return
+    const timer = setInterval(() => {
+      if (document.hidden) return
+      reloadRef.current.list()
+      reloadRef.current.active()
+    }, POLL_MS)
+    return () => clearInterval(timer)
+  }, [live])
 
   const set = (key: keyof Form) => (e: { target: { value: string } }) => {
     setForm({ ...form, [key]: e.target.value })
@@ -89,6 +108,7 @@ export default function SellerDashboard() {
       setEditingId(null)
       listings.reload()
       activeRequest.reload()
+      negotiations.reload()
     } catch (err) {
       setSubmitError(errorMessage(err))
     } finally {
@@ -194,7 +214,19 @@ export default function SellerDashboard() {
           </div>
         </form>
 
-        <section aria-label="My listings" className="card dash-list">
+        <div className="dash-list">
+        <section aria-label="My negotiations" className="card">
+          <h2 className="card-title">My negotiations</h2>
+          <p className="muted small">Active, agreed and finished negotiations, newest first. Each lasts at most 3 rounds.</p>
+          {negotiations.error != null && <ErrorCard error={negotiations.error} onRetry={negotiations.reload} />}
+          {negotiations.error == null && !negotiations.data && <LoadingCard label="Loading your negotiations..." />}
+          {negotiations.error == null && negotiations.data?.length === 0 && (
+            <p className="dash-empty">No negotiations yet. A negotiation starts when a buyer accepts your proposal or you accept theirs.</p>
+          )}
+          {negotiations.error == null && negotiations.data?.map((n) => <NegotiationRow key={n.id} n={n} />)}
+        </section>
+
+        <section aria-label="My listings" className="card">
           <div>
             <h2 className="card-title">My listings</h2>
             <p className="muted small">Prices cannot be changed on a listing while it is being negotiated.</p>
@@ -246,6 +278,54 @@ export default function SellerDashboard() {
               )
             })}
         </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** One negotiation in the seller's history, with the right next step for where it stands. */
+function NegotiationRow({ n }: { n: SellerNegotiationRow }) {
+  const path = `/negotiations/${encodeURIComponent(n.id)}`
+  const deal = n.status === 'agreed' ? (n.deal ?? 'pending') : null
+  return (
+    <div className="dash-item">
+      <div className="dash-item-main">
+        <div className="dash-item-tags">
+          {n.status === 'active' && (
+            <Badge tone="info">
+              Active, round {n.round} of {n.maxRounds}
+            </Badge>
+          )}
+          {n.status === 'agreed' && deal === 'pending' && <Badge tone="warning">Agreed, waiting for approvals</Badge>}
+          {n.status === 'agreed' && deal === 'approved' && <Badge tone="success">Deal approved</Badge>}
+          {n.status === 'agreed' && deal === 'declined' && <Badge tone="neutral">Deal declined</Badge>}
+          {n.status === 'no_agreement' && <Badge tone="warning">No agreement</Badge>}
+        </div>
+        <h3 className="dash-item-title">{n.service}</h3>
+        <p className="dash-item-meta">{n.buyerName}</p>
+        <p className="dash-item-meta">
+          {n.status === 'agreed' && n.agreedPrice != null
+            ? `Agreed at ${usd(n.agreedPrice)}`
+            : `Buyer agent ${usd(n.buyerOffer)}, your agent ${usd(n.sellerOffer)}`}
+        </p>
+      </div>
+      <div className="dash-item-side">
+        {n.status === 'active' && (
+          <Link to={path} className="btn btn-primary btn-lg">
+            Open negotiation
+          </Link>
+        )}
+        {n.status === 'agreed' && (
+          <Link to={`${path}/pay`} className={`btn btn-lg ${deal === 'pending' ? 'btn-primary' : 'btn-secondary'}`}>
+            {deal === 'pending' ? 'Review and approve' : 'View deal'}
+          </Link>
+        )}
+        {n.status === 'no_agreement' && (
+          <Link to={path} className="btn btn-secondary btn-lg">
+            See the result
+          </Link>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,8 @@
 // Shapes for proposals (how a negotiation starts) and for sellers searching buyer needs.
 // These match docs/API.md.
 
-export type ProposalStatus = 'pending' | 'accepted' | 'declined'
+/** "withdrawn": the side that sent it took it back. "declined" can also be automatic, see `closedReason`. */
+export type ProposalStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn'
 
 export type Proposal = {
   id: string
@@ -16,6 +17,11 @@ export type Proposal = {
   request: { id: string; title: string; buyerName: string; deliverables: string; deadline: string }
   /** Set once the proposal is accepted. Open it at /negotiations/:id. */
   negotiationId: string | null
+  /**
+   * "taken": the server declined it by itself because its listing or its request went into
+   * another negotiation. Null for answers a person gave.
+   */
+  closedReason: 'taken' | null
 }
 
 /** What a seller sees when searching what buyers need. Public fields only: no budget. */
@@ -27,6 +33,10 @@ export type OpenRequest = {
   deliverables: string
   /** YYYY-MM-DD */
   deadline: string
+  /** True while this request is in a negotiation, so a new proposal for it is refused. */
+  locked: boolean
+  /** True when the signed-in person owns it. A person can't negotiate with themselves. */
+  mine: boolean
 }
 
 export type RequestSort = 'match' | 'deadline'

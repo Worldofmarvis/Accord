@@ -21,6 +21,7 @@ export default function ServiceCard({ listing, onNegotiate, busy = false }: Prop
               {c}
             </Badge>
           ))}
+          {listing.mine && <Badge tone="primary">Your listing</Badge>}
           {listing.locked && (
             <Badge tone="warning">
               <LockIcon size={12} />
@@ -38,7 +39,11 @@ export default function ServiceCard({ listing, onNegotiate, busy = false }: Prop
           <div className="service-card-amount">{usd(listing.listPrice)}</div>
           <div className="muted small">Delivery in {listing.deliveryDays} days</div>
         </div>
-        {listing.locked ? (
+        {listing.mine ? (
+          <button type="button" className="btn btn-lg" disabled>
+            You can't negotiate with yourself
+          </button>
+        ) : listing.locked ? (
           <button type="button" className="btn btn-lg" disabled>
             In negotiation with another buyer
           </button>

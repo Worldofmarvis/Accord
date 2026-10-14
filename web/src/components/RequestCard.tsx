@@ -17,6 +17,13 @@ export default function RequestCard({ request, onNegotiate, busy = false }: Prop
       <div className="service-card-body">
         <div className="service-card-tags">
           <Badge tone="info">{request.category}</Badge>
+          {request.mine && <Badge tone="primary">Your request</Badge>}
+          {request.locked && (
+            <Badge tone="warning">
+              <LockIcon size={12} />
+              Locked
+            </Badge>
+          )}
         </div>
         <h3>{request.title}</h3>
         <p className="muted service-card-seller">{request.buyerName}</p>
@@ -30,9 +37,19 @@ export default function RequestCard({ request, onNegotiate, busy = false }: Prop
             <LockIcon size={12} color="var(--color-text-muted)" /> Budget is private
           </div>
         </div>
-        <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(request)}>
-          {busy ? 'Sending...' : 'Negotiate'}
-        </button>
+        {request.mine ? (
+          <button type="button" className="btn btn-lg" disabled>
+            You can't negotiate with yourself
+          </button>
+        ) : request.locked ? (
+          <button type="button" className="btn btn-lg" disabled>
+            Already in a negotiation
+          </button>
+        ) : (
+          <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(request)}>
+            {busy ? 'Sending...' : 'Negotiate'}
+          </button>
+        )}
       </div>
     </article>
   )

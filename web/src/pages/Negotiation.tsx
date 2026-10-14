@@ -9,6 +9,7 @@ import OfferCard from '../components/OfferCard'
 import PriceRange from '../components/PriceRange'
 import RoundProgress from '../components/RoundProgress'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
+import { useApproval } from '../hooks/useApproval'
 import { useNegotiation } from '../hooks/useNegotiation'
 import { usd } from '../lib/format'
 import type { Role } from '../types/marketplace'
@@ -27,6 +28,9 @@ export default function Negotiation() {
     if (status === 'agreed') navigate(`${path}/pay`, { replace: true })
     if (status === 'no_agreement') navigate(`${path}/no-agreement`, { replace: true })
   }, [status, viewerRole, id, navigate])
+
+  // A seller stays here after "agreed", so keep following the deal until it is approved or declined.
+  const deal = useApproval(id, n?.status === 'agreed' && n.viewerRole === 'seller')
 
   if (!n) {
     return (
@@ -52,9 +56,23 @@ export default function Negotiation() {
               <h1>You reached an agreement</h1>
               <p>
                 {n.service} with {n.counterpartName}
-                {n.agreedPrice != null && <> at {usd(n.agreedPrice)}</>}. The buyer now reviews the agreed price and
-                pays. Nothing is final until they approve.
+                {n.agreedPrice != null && <> at {usd(n.agreedPrice)}</>}. You and the buyer both approve the agreed
+                price first, then the buyer pays. Nothing is charged until you both approve.
               </p>
+              {deal.approval && (
+                <div className="notice notice-warning" role="status">
+                  {deal.approval.status === 'declined'
+                    ? 'This deal was declined. Nothing was charged.'
+                    : deal.approval.status === 'approved'
+                      ? 'Both of you approved. The buyer can pay now.'
+                      : deal.approval.seller === 'approved'
+                        ? 'You approved. Waiting for the buyer to approve.'
+                        : 'Waiting for your approval.'}
+                </div>
+              )}
+              <Link to={`/negotiations/${encodeURIComponent(id)}/pay`} className="btn btn-primary btn-lg">
+                {deal.approval?.seller === 'pending' || !deal.approval ? 'Review and approve' : 'View the deal'}
+              </Link>
             </>
           ) : (
             <>

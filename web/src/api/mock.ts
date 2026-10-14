@@ -2,14 +2,19 @@
 // src/data, in memory. Used when VITE_USE_MOCK is not "false". Reloading the page resets it.
 import { ApiError } from './errors'
 import type { Api } from './types'
+import { approvalStatus } from '../lib/approval'
 import {
+  DEMO_AGREED_ID,
   DEMO_ENDED_ID,
   DEMO_NEGOTIATION_ID,
+  DEMO_SELLER_ENDED_ID,
   DEMO_SELLER_NEGOTIATION_ID,
+  demoAgreedNegotiation,
   demoEndedNegotiation,
   demoEndedSession,
   demoMessages,
   demoNegotiation,
+  demoSellerEndedNegotiation,
   demoSellerNegotiation,
   listings,
   openRequests,
@@ -19,9 +24,10 @@ import {
   initialBuyerRequests,
   initialSellerListings,
   sellerActiveNegotiation,
+  sellerNegotiations,
 } from '../data/dashboardMock'
 import type { BuyerRequest, SellerListing } from '../types/dashboard'
-import type { ChatMessage, Listing, SearchQuery } from '../types/marketplace'
+import type { ChatMessage, DealApproval, Decision, Listing, SearchQuery } from '../types/marketplace'
 import type { Role } from '../types/me'
 import type { OpenRequest, Proposal, RequestQuery } from '../types/proposal'
 
@@ -85,11 +91,28 @@ function requestInfo(role: Role, id: string): Proposal['request'] | undefined {
   return r && { id: r.id, title: r.title, buyerName: r.buyerName, deliverables: r.deliverables, deadline: r.deadline }
 }
 
+// Listings and requests that went into a negotiation by accepting a proposal. Ids only mean something
+// next to a side (the demo person is both buyer and seller), so the keys start with the role.
+const lockedListings = new Set<string>()
+const lockedRequests = new Set<string>()
+const lockKey = (role: Role, id: string) => `${role}:${id}`
+
 // A seller is locked while another negotiation is active (rule 4).
 function isLocked(role: Role, listingId: string): boolean {
+  if (lockedListings.has(lockKey(role, listingId))) return true
   return role === 'buyer'
     ? Boolean(listings.find((l) => l.id === listingId)?.locked)
     : sellerActiveNegotiation?.listingId === listingId
+}
+
+// A buyer's request is locked the same way: one negotiation at a time.
+const isRequestLocked = (role: Role, requestId: string) => lockedRequests.has(lockKey(role, requestId))
+
+// Nobody can negotiate with themselves: the listing and the request belong to the same person.
+function isSelfDeal(role: Role, listingId: string, requestId: string): boolean {
+  const ownListing = role === 'seller' || Boolean(listings.find((l) => l.id === listingId)?.mine)
+  const ownRequest = role === 'buyer' || Boolean(openRequests.find((r) => r.id === requestId)?.mine)
+  return ownListing && ownRequest
 }
 
 let proposals: MockProposal[] = [
@@ -103,6 +126,7 @@ let proposals: MockProposal[] = [
     listing: listingInfo('buyer', 'l3')!,
     request: requestInfo('buyer', 'r1')!,
     negotiationId: null,
+    closedReason: null,
   },
   {
     id: 'p-seed-2',
@@ -113,6 +137,7 @@ let proposals: MockProposal[] = [
     listing: listingInfo('seller', 'l6')!,
     request: requestInfo('seller', 'q1')!,
     negotiationId: null,
+    closedReason: null,
   },
 ]
 
@@ -123,6 +148,21 @@ const publicProposal = ({ forRole, initiatedBy, ...rest }: MockProposal): Propos
 
 const patchProposal = (id: string, patch: Partial<MockProposal>) => {
   proposals = proposals.map((p) => (p.id === id ? { ...p, ...patch } : p))
+}
+
+/**
+ * A proposal was accepted: the negotiation starts, its listing and its request are locked, and every
+ * other pending proposal for either of them is closed at once, so nobody can end up with two deals
+ * or answer something that is no longer possible. The real back end does the same in one transaction.
+ */
+function acceptProposalNow(role: Role, p: MockProposal) {
+  lockedListings.add(lockKey(role, p.listing.id))
+  lockedRequests.add(lockKey(role, p.request.id))
+  proposals = proposals.map((x) => {
+    if (x.id === p.id) return { ...x, status: 'accepted', negotiationId: negotiationFor(role) }
+    const sameThing = x.listing.id === p.listing.id || x.request.id === p.request.id
+    return x.forRole === role && x.status === 'pending' && sameThing ? { ...x, status: 'declined', closedReason: 'taken' } : x
+  })
 }
 
 function filterRequests(items: OpenRequest[], q: RequestQuery): OpenRequest[] {
@@ -139,7 +179,50 @@ function filterRequests(items: OpenRequest[], q: RequestQuery): OpenRequest[] {
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that negotiation.')
 
 const isKnownNegotiation = (id: string) =>
-  id === DEMO_NEGOTIATION_ID || id === DEMO_SELLER_NEGOTIATION_ID || id === DEMO_ENDED_ID || id === 'n1'
+  id === DEMO_NEGOTIATION_ID ||
+  id === DEMO_SELLER_NEGOTIATION_ID ||
+  id === DEMO_ENDED_ID ||
+  id === DEMO_AGREED_ID ||
+  id === DEMO_SELLER_ENDED_ID ||
+  id === 'n1'
+
+// Both humans' decisions on the agreed demo deal. One shared object, as on the real back end.
+let approval: { buyer: Decision; seller: Decision } = { buyer: 'pending', seller: 'pending' }
+
+function currentApproval(id: string): DealApproval {
+  return {
+    negotiationId: id,
+    agreedPrice: 380,
+    buyer: approval.buyer,
+    seller: approval.seller,
+    status: approvalStatus(approval.buyer, approval.seller),
+  }
+}
+
+/** Only an agreed negotiation has an approval (same rule as the real back end). */
+function requireAgreed(id: string) {
+  if (!isKnownNegotiation(id)) throw notFound()
+  if (id !== DEMO_AGREED_ID) throw new ApiError(400, 'VALIDATION', 'This negotiation has not reached an agreement.')
+}
+
+async function decide(id: string, decision: 'approved' | 'declined'): Promise<DealApproval> {
+  await delay()
+  requireAgreed(id)
+  const mine = demoRole
+  const other: Role = mine === 'buyer' ? 'seller' : 'buyer'
+  if (approvalStatus(approval.buyer, approval.seller) === 'declined') {
+    throw new ApiError(400, 'VALIDATION', 'This deal was already declined, so nothing can be approved.')
+  }
+  if (approval[mine] !== 'pending') throw new ApiError(400, 'VALIDATION', 'You already answered this deal.')
+  approval = { ...approval, [mine]: decision }
+  // The demo counterpart approves a few seconds later, so a presentation can show the whole flow.
+  if (decision === 'approved') {
+    setTimeout(() => {
+      if (approval[other] === 'pending') approval = { ...approval, [other]: 'approved' }
+    }, SIM_ACCEPT_MS)
+  }
+  return currentApproval(id)
+}
 
 const notYours = () => new ApiError(403, 'FORBIDDEN', 'This is not your negotiation.')
 
@@ -152,22 +235,31 @@ export const mockApi: Api = {
 
   async searchListings(q) {
     await delay()
-    return filterListings(listings, q)
+    // A seller who went into a negotiation by accepting a proposal shows as locked here too.
+    return filterListings(
+      listings.map((l) => ({ ...l, locked: l.locked || lockedListings.has(lockKey('buyer', l.id)) })),
+      q,
+    )
   },
 
   async searchRequests(q) {
     await delay()
     if (demoRole !== 'seller') throw new ApiError(403, 'FORBIDDEN', 'Only sellers can search buyer requests.')
-    return filterRequests(openRequests, q)
+    return filterRequests(
+      openRequests.map((r) => ({ ...r, locked: r.locked || isRequestLocked('seller', r.id) })),
+      q,
+    )
   },
 
-  async sendProposal({ listingId, requestId }) {
+  async sendProposal({ role, listingId, requestId }) {
     await delay()
-    const role = demoRole
     const listing = listingInfo(role, listingId)
     const request = requestInfo(role, requestId)
     if (!listing) throw new ApiError(404, 'NOT_FOUND', 'We could not find that listing.')
     if (!request) throw new ApiError(404, 'NOT_FOUND', 'We could not find that request.')
+    if (isSelfDeal(role, listingId, requestId)) {
+      throw new ApiError(400, 'VALIDATION', "You can't negotiate with yourself. Pick a listing or a request that isn't yours.")
+    }
     if (isLocked(role, listingId)) {
       throw new ApiError(
         409,
@@ -175,6 +267,15 @@ export const mockApi: Api = {
         role === 'buyer'
           ? 'This seller is already negotiating with another buyer.'
           : 'This listing is already in a negotiation.',
+      )
+    }
+    if (isRequestLocked(role, requestId)) {
+      throw new ApiError(
+        409,
+        'REQUEST_LOCKED',
+        role === 'buyer'
+          ? 'This request is already in a negotiation. Send a new proposal when it ends.'
+          : 'This buyer already started a negotiation for this request.',
       )
     }
     const samePair = proposals.find(
@@ -192,24 +293,38 @@ export const mockApi: Api = {
 
     const id = nextId('p')
     proposals = [
-      { id, forRole: role, initiatedBy: role, status: 'pending', createdAt: new Date().toISOString(), listing, request, negotiationId: null },
+      {
+        id,
+        forRole: role,
+        initiatedBy: role,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        listing,
+        request,
+        negotiationId: null,
+        closedReason: null,
+      },
       ...proposals,
     ]
     // The demo counterpart accepts after a few seconds, so a presentation can show the whole flow.
     setTimeout(() => {
-      if (proposals.find((p) => p.id === id)?.status === 'pending') {
-        patchProposal(id, { status: 'accepted', negotiationId: negotiationFor(role) })
-      }
+      const sent = proposals.find((p) => p.id === id)
+      if (sent?.status === 'pending') acceptProposalNow(role, sent)
     }, SIM_ACCEPT_MS)
     return { id }
   },
 
-  async listProposals() {
+  async listProposals(role) {
     await delay()
     return proposals
-      .filter((p) => p.forRole === demoRole)
+      .filter((p) => p.forRole === role)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map(publicProposal)
+  },
+
+  async countIncomingProposals(role) {
+    await delay(80)
+    return proposals.filter((p) => p.forRole === role && p.initiatedBy !== role && p.status === 'pending').length
   },
 
   async acceptProposal(id) {
@@ -218,10 +333,16 @@ export const mockApi: Api = {
     if (!p) throw new ApiError(404, 'NOT_FOUND', 'We could not find that proposal.')
     if (p.initiatedBy === demoRole) throw new ApiError(403, 'FORBIDDEN', 'You sent this proposal, so the other side answers it.')
     if (p.status !== 'pending') throw new ApiError(400, 'VALIDATION', 'This proposal was already answered.')
+    if (isSelfDeal(demoRole, p.listing.id, p.request.id)) {
+      throw new ApiError(400, 'VALIDATION', "You can't negotiate with yourself.")
+    }
     if (isLocked(demoRole, p.listing.id)) {
       throw new ApiError(409, 'SELLER_LOCKED', 'The listing is now in another negotiation, so this proposal cannot be accepted.')
     }
-    patchProposal(id, { status: 'accepted', negotiationId: negotiationFor(demoRole) })
+    if (isRequestLocked(demoRole, p.request.id)) {
+      throw new ApiError(409, 'REQUEST_LOCKED', 'The request is now in another negotiation, so this proposal cannot be accepted.')
+    }
+    acceptProposalNow(demoRole, p)
     return publicProposal(proposals.find((x) => x.id === id)!)
   },
 
@@ -235,10 +356,25 @@ export const mockApi: Api = {
     return publicProposal(proposals.find((x) => x.id === id)!)
   },
 
+  async withdrawProposal(id) {
+    await delay()
+    const p = proposals.find((x) => x.id === id && x.forRole === demoRole)
+    if (!p) throw new ApiError(404, 'NOT_FOUND', 'We could not find that proposal.')
+    if (p.initiatedBy !== demoRole) throw new ApiError(403, 'FORBIDDEN', 'Only the side that sent a proposal can withdraw it.')
+    if (p.status !== 'pending') throw new ApiError(400, 'VALIDATION', 'This proposal was already answered.')
+    patchProposal(id, { status: 'withdrawn' })
+    return publicProposal(proposals.find((x) => x.id === id)!)
+  },
+
   async getNegotiation(id) {
     await delay(150)
     if (!isKnownNegotiation(id)) throw notFound()
     // The real back end picks the view from who is signed in. The demo picks it from the header switch.
+    if (id === DEMO_AGREED_ID) return demoAgreedNegotiation(id, demoRole)
+    if (id === DEMO_SELLER_ENDED_ID) {
+      if (demoRole !== 'seller') throw notYours()
+      return demoSellerEndedNegotiation(id)
+    }
     if (id === DEMO_SELLER_NEGOTIATION_ID) {
       if (demoRole !== 'seller') throw notYours()
       return demoSellerNegotiation(id)
@@ -269,6 +405,15 @@ export const mockApi: Api = {
     return created
   },
 
+  async getApproval(id) {
+    await delay(150)
+    requireAgreed(id)
+    return currentApproval(id)
+  },
+
+  approveDeal: (id) => decide(id, 'approved'),
+  declineDeal: (id) => decide(id, 'declined'),
+
   async getOutcome(id) {
     await delay()
     if (id === 'n1') throw new ApiError(409, 'VALIDATION', 'This negotiation has not ended yet.')
@@ -278,13 +423,13 @@ export const mockApi: Api = {
 
   async listBuyerRequests() {
     await delay()
-    return [...buyerRequests]
+    return buyerRequests.map((r) => ({ ...r, locked: isRequestLocked('buyer', r.id) }))
   },
 
   async createBuyerRequest(input) {
     await delay()
     if (input.max < input.target) throw new ApiError(400, 'VALIDATION', 'The maximum must be at least the target.')
-    const created: BuyerRequest = { id: nextId('r'), ...input }
+    const created: BuyerRequest = { id: nextId('r'), ...input, locked: false }
     buyerRequests = [created, ...buyerRequests]
     return created
   },
@@ -322,6 +467,14 @@ export const mockApi: Api = {
     const updated: SellerListing = { id, ...input }
     sellerListings = sellerListings.map((l) => (l.id === id ? updated : l))
     return updated
+  },
+
+  async listSellerNegotiations() {
+    await delay()
+    // The settled one follows the shared approval state, so approving on the Payment screen shows up here.
+    return sellerNegotiations.map((r) =>
+      r.id === DEMO_AGREED_ID ? { ...r, deal: approvalStatus(approval.buyer, approval.seller) } : { ...r },
+    )
   },
 
   async getSellerActiveNegotiation() {

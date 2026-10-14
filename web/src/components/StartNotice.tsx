@@ -35,6 +35,15 @@ export default function StartNotice({ problem }: { problem: StartProblem }) {
       </div>
     )
   }
+  if (problem.kind === 'request-locked') {
+    return (
+      <div className="notice notice-warning" role="alert">
+        {problem.role === 'buyer'
+          ? "That request is already in a negotiation, so you can't send another proposal for it right now. It opens up again if the negotiation ends without a deal."
+          : `${problem.name} already started a negotiation for this request, so you can't send a proposal for it right now.`}
+      </div>
+    )
+  }
   return (
     <div className="notice notice-danger" role="alert">
       {problem.message}
