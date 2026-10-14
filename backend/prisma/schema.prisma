@@ -12,6 +12,12 @@ enum Role {
   SELLER
 }
 
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 enum NegotiationStatus {
   OPEN
   IN_PROGRESS
@@ -32,26 +38,59 @@ enum PaymentStatus {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   name      String
-  role      Role
+  role      Role     @default(BUYER)
+  roles     Role[]   @default([BUYER, SELLER])
+
   listings  Listing[]
+  requests  BuyerRequest[]
   messages  Message[]
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
+}
+
+model BuyerRequest {
+  id           String   @id @default(uuid())
+  buyerId      String
+  buyer        User     @relation(fields: [buyerId], references: [id])
+  title        String
+  category     String
+  deliverables String
+  deadline     String
+  targetPrice  Float
+  maxPrice     Float
+  createdAt    DateTime @default(now())
+
+  proposals    Proposal[]
 }
 
 model Listing {
-  id           String        @id @default(uuid())
+  id           String   @id @default(uuid())
   sellerId     String
-  seller       User          @relation(fields: [sellerId], references: [id])
+  seller       User     @relation(fields: [sellerId], references: [id])
   title        String
   description  String?
   category     String
   listPrice    Float
-  floorPrice   Float         // Private: Never leak to buyer front-end
+  floorPrice   Float    // Private: Never leak to buyer front-end
+  deliveryDays Int      @default(7)
+  createdAt    DateTime @default(now())
+
   negotiations Negotiation[]
-  createdAt    DateTime      @default(now())
+  proposals    Proposal[]
+}
+
+model Proposal {
+  id            String         @id @default(uuid())
+  listingId     String
+  listing       Listing        @relation(fields: [listingId], references: [id])
+  requestId     String
+  request       BuyerRequest   @relation(fields: [requestId], references: [id])
+  status        ProposalStatus @default(PENDING)
+  negotiationId String?        @unique
+  negotiation   Negotiation?   @relation(fields: [negotiationId], references: [id])
+  createdAt     DateTime       @default(now())
 }
 
 model Negotiation {
@@ -66,6 +105,7 @@ model Negotiation {
   updatedAt     DateTime          @updatedAt
 
   listing     Listing      @relation(fields: [listingId], references: [id])
+  proposal    Proposal?
   offers      Offer[]
   messages    Message[]
   payments    Payment[]
@@ -110,5 +150,5 @@ model AuditEvent {
   payload       String   // JSON formatted metadata
   createdAt     DateTime @default(now())
 
-  negotiation   Negotiation? @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  negotiation Negotiation? @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
 }

@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
-import { PrismaClient, OfferBy, NegotiationStatus, PaymentStatus } from '@prisma/client';
+import { PrismaClient, NegotiationStatus, OfferBy, PaymentStatus, ProposalStatus } from '@prisma/client';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -10,63 +10,214 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
+// Helper for standardized contract errors
+const sendApiError = (res: Response, status: number, code: string, message: string) => {
+  return res.status(status).json({ error: { code, message } });
+};
+
+// GET /api/health - Health check endpoint
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Backend is running smoothly!' });
 });
 
-// GET /api/listings - Public query (hides secret floorPrice)
+// GET /api/me - Authenticated user info
+app.get('/api/me', async (_req: Request, res: Response) => {
+  const user = await prisma.user.findFirst();
+  if (!user) return sendApiError(res, 401, 'UNAUTHENTICATED', 'Please sign in to continue');
+
+  res.json({
+    id: user.id,
+    name: user.name,
+    roles: (user.roles || [user.role]).map((r: string) => r.toLowerCase()),
+  });
+});
+
+// GET /api/listings - Search public listings (floorPrice hidden)
 app.get('/api/listings', async (req: Request, res: Response) => {
   try {
+    const { keyword, category, maxPrice } = req.query;
+
+    const where: any = {};
+    if (category) where.category = String(category);
+    if (maxPrice) where.listPrice = { lte: Number(maxPrice) };
+    if (keyword) {
+      where.OR = [
+        { title: { contains: String(keyword), mode: 'insensitive' } },
+        { description: { contains: String(keyword), mode: 'insensitive' } },
+      ];
+    }
+
     const listings = await prisma.listing.findMany({
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        category: true,
-        listPrice: true,
-        sellerId: true,
-        createdAt: true,
+      where,
+      include: {
+        seller: true,
+        negotiations: { where: { status: NegotiationStatus.OPEN } },
       },
     });
-    res.json(listings);
+
+    const result = listings.map((l) => ({
+      id: l.id,
+      title: l.title,
+      sellerName: l.seller.name,
+      description: l.description,
+      categories: [l.category],
+      tags: [l.category.toLowerCase()],
+      listPrice: l.listPrice,
+      deliveryDays: l.deliveryDays ?? 7,
+      locked: l.negotiations.length > 0,
+    }));
+
+    res.json(result);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to fetch listings' });
   }
 });
 
-// INTERNAL ONLY: Engine limits query (Buyer Max & Seller Floor)
-app.get('/api/internal/negotiations/:id/limits', async (req: Request, res: Response) => {
+// POST /api/proposals - Create a negotiation proposal
+app.post('/api/proposals', async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string;
-    const negotiation = await prisma.negotiation.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        buyerMaxPrice: true,
-        listing: {
-          select: {
-            floorPrice: true,
-          },
-        },
-      },
-    });
+    const { listingId, requestId } = req.body;
 
-    if (!negotiation) {
-      return res.status(404).json({ error: 'Negotiation not found' });
+    const activeNeg = await prisma.negotiation.findFirst({
+      where: { listingId, status: NegotiationStatus.OPEN },
+    });
+    if (activeNeg) {
+      return sendApiError(res, 409, 'SELLER_LOCKED', 'Listing is currently in an active negotiation');
     }
 
-    res.json({
-      negotiationId: negotiation.id,
-      buyerMaxPrice: negotiation.buyerMaxPrice,
-      sellerFloorPrice: negotiation.listing.floorPrice,
+    const proposal = await prisma.proposal.create({
+      data: { listingId, requestId, status: ProposalStatus.PENDING },
     });
+
+    res.status(201).json({ id: proposal.id });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch limits' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create proposal' });
   }
 });
 
-// POST /api/negotiations/offer - Submit offer with Day 3 & Day 4 constraints
+// POST /api/proposals/:id/accept - Accept proposal & create active negotiation
+app.post('/api/proposals/:id/accept', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const proposal = await tx.proposal.findUnique({
+        where: { id: String(id) },
+        include: { listing: true, request: true },
+      });
+
+      if (!proposal || proposal.status !== ProposalStatus.PENDING) {
+        throw new Error('NOT_FOUND');
+      }
+
+      const activeNeg = await tx.negotiation.findFirst({
+        where: { listingId: proposal.listingId, status: NegotiationStatus.OPEN },
+      });
+      if (activeNeg) throw new Error('SELLER_LOCKED');
+
+      const negotiation = await tx.negotiation.create({
+        data: {
+          listingId: proposal.listingId,
+          buyerId: proposal.request.buyerId,
+          status: NegotiationStatus.OPEN,
+          buyerMaxPrice: proposal.request.maxPrice,
+          currentRound: 1,
+        },
+      });
+
+      const updatedProposal = await tx.proposal.update({
+        where: { id: String(id) },
+        data: { status: ProposalStatus.ACCEPTED, negotiationId: negotiation.id },
+        include: {
+          listing: { include: { seller: true } },
+          request: { include: { buyer: true } },
+        },
+      });
+
+      return updatedProposal;
+    });
+
+    res.json({
+      id: result.id,
+      direction: 'incoming',
+      status: 'accepted',
+      createdAt: result.createdAt,
+      listing: {
+        id: result.listing.id,
+        title: result.listing.title,
+        sellerName: result.listing.seller.name,
+        listPrice: result.listing.listPrice,
+      },
+      request: {
+        id: result.request.id,
+        title: result.request.title,
+        buyerName: result.request.buyer.name,
+        deliverables: result.request.deliverables,
+        deadline: result.request.deadline,
+      },
+      negotiationId: result.negotiationId,
+    });
+  } catch (error: any) {
+    if (error.message === 'SELLER_LOCKED') {
+      return sendApiError(res, 409, 'SELLER_LOCKED', 'Listing locked by another negotiation');
+    }
+    return sendApiError(res, 404, 'NOT_FOUND', 'Proposal not found');
+  }
+});
+
+// GET /api/negotiations/:id - Fetch negotiation thread with role-based view
+app.get('/api/negotiations/:id', async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const callerId = (req.headers['x-user-id'] as string) || '';
+
+    const negotiation = await prisma.negotiation.findUnique({
+      where: { id },
+      include: {
+        listing: { include: { seller: true } },
+        offers: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' } },
+        auditEvents: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    if (!negotiation) return sendApiError(res, 404, 'NOT_FOUND', 'Negotiation not found');
+
+    const isBuyer = callerId === negotiation.buyerId;
+    const viewerRole = isBuyer ? 'buyer' : 'seller';
+
+    res.json({
+      id: negotiation.id,
+      status: negotiation.status === NegotiationStatus.OPEN ? 'active' : negotiation.status.toLowerCase(),
+      viewerRole,
+      service: negotiation.listing.title,
+      counterpartName: isBuyer ? negotiation.listing.seller.name : 'Buyer',
+      listPrice: negotiation.listing.listPrice,
+      round: negotiation.currentRound,
+      maxRounds: 3,
+      waitingOn: 'seller',
+      ...(isBuyer
+        ? { buyerLimits: { target: (negotiation.buyerMaxPrice || 0) * 0.9, max: negotiation.buyerMaxPrice } }
+        : { sellerLimits: { floor: negotiation.listing.floorPrice } }),
+      agreedPrice: negotiation.finalPrice || null,
+      offers: negotiation.offers.map((o) => ({
+        round: o.roundNumber,
+        role: o.offeredBy === OfferBy.BUYER_AGENT ? 'buyer' : 'seller',
+        amount: o.proposedPrice,
+        note: 'Processed by negotiation engine',
+      })),
+      messages: negotiation.messages,
+      auditEvents: negotiation.auditEvents,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch negotiation thread' });
+  }
+});
+
+// POST /api/negotiations/offer - Submit offer with Round limits & Seller Lock
 app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
   try {
     const { listingId, buyerId, amount } = req.body;
@@ -80,10 +231,10 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    // Execute within Prisma transaction to enforce Seller Lock
     const result = await prisma.$transaction(async (tx) => {
       let negotiation = await tx.negotiation.findFirst({
         where: { listingId, buyerId, status: NegotiationStatus.OPEN },
+        include: { offers: true },
       });
 
       if (!negotiation) {
@@ -93,13 +244,13 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
             buyerId,
             status: NegotiationStatus.OPEN,
             buyerMaxPrice: numericAmount,
+            currentRound: 1,
           },
+          include: { offers: true },
         });
       }
 
-      const currentRound = negotiation.currentRound ?? 1;
-
-      if (currentRound > 3) {
+      if (negotiation.currentRound > 3) {
         await tx.negotiation.update({
           where: { id: negotiation.id },
           data: { status: NegotiationStatus.FAILED },
@@ -107,13 +258,14 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
         throw new Error('MAX_ROUNDS_EXCEEDED');
       }
 
+      const activeRound = negotiation.currentRound;
       const isAutoAccepted = numericAmount >= listing.floorPrice;
 
       const offer = await tx.offer.create({
         data: {
           negotiationId: negotiation.id,
           proposedPrice: numericAmount,
-          roundNumber: currentRound,
+          roundNumber: activeRound,
           offeredBy: OfferBy.BUYER_AGENT,
         },
       });
@@ -122,7 +274,23 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
         negotiation = await tx.negotiation.update({
           where: { id: negotiation.id },
           data: { status: NegotiationStatus.AGREED, finalPrice: numericAmount },
+          include: { offers: true },
         });
+      } else {
+        const nextRound = activeRound + 1;
+        if (nextRound > 3) {
+          negotiation = await tx.negotiation.update({
+            where: { id: negotiation.id },
+            data: { status: NegotiationStatus.FAILED, currentRound: nextRound },
+            include: { offers: true },
+          });
+        } else {
+          negotiation = await tx.negotiation.update({
+            where: { id: negotiation.id },
+            data: { currentRound: nextRound },
+            include: { offers: true },
+          });
+        }
       }
 
       await tx.auditEvent.create({
@@ -132,7 +300,7 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
           payload: JSON.stringify({
             offerId: offer.id,
             amount: numericAmount,
-            roundNumber: currentRound,
+            roundNumber: activeRound,
           }),
         },
       });
@@ -159,35 +327,10 @@ app.post('/api/negotiations/offer', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/negotiations/:id - Fetch negotiation thread
-app.get('/api/negotiations/:id', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const negotiation = await prisma.negotiation.findUnique({
-      where: { id },
-      include: {
-        offers: { orderBy: { createdAt: 'asc' } },
-        messages: { orderBy: { createdAt: 'asc' } },
-        auditEvents: { orderBy: { createdAt: 'asc' } },
-        listing: { select: { title: true, listPrice: true } },
-      },
-    });
-
-    if (!negotiation) {
-      return res.status(404).json({ error: 'Negotiation thread not found' });
-    }
-
-    res.json(negotiation);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch negotiation thread' });
-  }
-});
-
 // GET /api/negotiations/:id/messages - Chat history query
 app.get('/api/negotiations/:id/messages', async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string;
+    const id = String(req.params.id);
     const messages = await prisma.message.findMany({
       where: { negotiationId: id },
       orderBy: { createdAt: 'asc' },
@@ -202,7 +345,7 @@ app.get('/api/negotiations/:id/messages', async (req: Request, res: Response) =>
 // POST /api/negotiations/:id/messages - Send a message
 app.post('/api/negotiations/:id/messages', async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string;
+    const id = String(req.params.id);
     const { senderId, content } = req.body;
 
     const message = await prisma.message.create({
@@ -224,7 +367,6 @@ app.post('/api/payments/webhook', async (req: Request, res: Response) => {
   try {
     const { paypalOrderId, negotiationId, amount, status } = req.body;
 
-    // Check if payment record already exists (Idempotency check)
     const existingPayment = await prisma.payment.findUnique({
       where: { paypalOrderId },
     });
@@ -258,54 +400,52 @@ app.post('/api/payments/webhook', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/internal/negotiations/:id/rematch-candidates - Day 5 Rematch Query
+// GET /api/internal/negotiations/:id/rematch-candidates - Engine Rematch Query
 app.get('/api/internal/negotiations/:id/rematch-candidates', async (req: Request, res: Response) => {
-    try {
-      const id = req.params.id as string;
-  
-      // 1. Fetch original negotiation to find category and buyer's target price
-      const negotiation = await prisma.negotiation.findUnique({
-        where: { id },
-        include: { listing: true },
-      });
-  
-      if (!negotiation) {
-        return res.status(404).json({ error: 'Negotiation not found' });
-      }
-  
-      const buyerTargetPrice = negotiation.buyerMaxPrice || negotiation.listing.listPrice;
-      const category = negotiation.listing.category;
-  
-      // 2. Query other listings in the same category matching the price range
-      const candidates = await prisma.listing.findMany({
-        where: {
-          category,
-          id: { not: negotiation.listingId }, // Exclude current listing
-          listPrice: { lte: buyerTargetPrice * 1.2 }, // Fits budget window
-        },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          category: true,
-          listPrice: true,
-          sellerId: true,
-          createdAt: true,
-        },
-      });
-  
-      res.json({
-        negotiationId: id,
-        category,
-        buyerTargetPrice,
-        candidateCount: candidates.length,
-        candidates,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to find rematch candidates' });
+  try {
+    const id = String(req.params.id);
+
+    const negotiation = await prisma.negotiation.findUnique({
+      where: { id },
+      include: { listing: true },
+    });
+
+    if (!negotiation) {
+      return res.status(404).json({ error: 'Negotiation not found' });
     }
-  });
+
+    const buyerTargetPrice = negotiation.buyerMaxPrice || negotiation.listing.listPrice;
+    const category = negotiation.listing.category;
+
+    const candidates = await prisma.listing.findMany({
+      where: {
+        category,
+        id: { not: negotiation.listingId },
+        listPrice: { lte: buyerTargetPrice * 1.2 },
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        listPrice: true,
+        sellerId: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      negotiationId: id,
+      category,
+      buyerTargetPrice,
+      candidateCount: candidates.length,
+      candidates,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to find rematch candidates' });
+  }
+});
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server running on http://127.0.0.1:${PORT}`);
