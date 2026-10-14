@@ -65,7 +65,7 @@ export const initialSellerListings: SellerListing[] = [
 
 // The seller has one active negotiation (rule 3), so every listing is locked for other buyers.
 export const sellerActiveNegotiation: SellerActiveNegotiation | null = {
-  negotiationId: 'n1',
+  negotiationId: 'demo-seller',
   listingId: 'l1',
   round: 2,
   maxRounds: 3,

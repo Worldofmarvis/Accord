@@ -35,13 +35,17 @@ export type NegotiationStatus = 'active' | 'agreed' | 'no_agreement'
 export type Negotiation = {
   id: string
   status: NegotiationStatus
+  /** Which side the person looking at it is. */
+  viewerRole: Role
   service: string
-  sellerName: string
+  /** The seller's name for a buyer, the buyer's name for a seller. */
+  counterpartName: string
   listPrice: number
   round: number
   maxRounds: number
-  /** Only the buyer's own limits are ever sent to the buyer's browser. */
-  buyerLimits: { target: number; max: number }
+  /** The viewer's own limits only, never the other side's. A buyer gets `buyerLimits`, a seller gets `sellerLimits`. */
+  buyerLimits?: { target: number; max: number }
+  sellerLimits?: { floor: number }
   /** Set when `status` is "agreed", otherwise null. */
   agreedPrice: number | null
   offers: Offer[]

@@ -7,6 +7,7 @@ import type {
   SellerListing,
 } from '../types/dashboard'
 import type { Me } from '../types/me'
+import type { OpenRequest, Proposal, RequestQuery } from '../types/proposal'
 import type { ChatMessage, EndedSession, Listing, Negotiation, SearchQuery } from '../types/marketplace'
 
 /**
@@ -18,11 +19,17 @@ export interface Api {
   // Who is signed in
   getMe(): Promise<Me>
 
-  // Search and start
+  // Search: buyers search seller listings, sellers search buyer requests
   searchListings(query: SearchQuery): Promise<Listing[]>
-  startNegotiation(input: { listingId: string; requestId: string }): Promise<{ id: string }>
+  searchRequests(query: RequestQuery): Promise<OpenRequest[]>
 
-  // Live negotiation (buyer view)
+  // Proposals: every negotiation starts with one, and the other side accepts or declines
+  sendProposal(input: { listingId: string; requestId: string }): Promise<{ id: string }>
+  listProposals(): Promise<Proposal[]>
+  acceptProposal(id: string): Promise<Proposal>
+  declineProposal(id: string): Promise<Proposal>
+
+  // Live negotiation (buyer or seller view)
   getNegotiation(id: string): Promise<Negotiation>
   getMessages(id: string, afterId?: string): Promise<ChatMessage[]>
   /** Returns the stored message, followed by a system warning if the text looks like a price. */

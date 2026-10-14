@@ -13,12 +13,23 @@ export const realApi: Api = {
       query: { keyword: q.keyword, category: q.category, maxPrice: q.maxPrice, sort: q.sort },
     }),
 
-  startNegotiation: (input) => request('/negotiations', { method: 'POST', body: input }),
+  searchRequests: (q) => request('/requests', { query: { keyword: q.keyword, category: q.category, sort: q.sort } }),
+
+  sendProposal: (input) => request('/proposals', { method: 'POST', body: input }),
+  listProposals: () => request('/proposals'),
+  acceptProposal: (id) => request(`/proposals/${enc(id)}/accept`, { method: 'POST' }),
+  declineProposal: (id) => request(`/proposals/${enc(id)}/decline`, { method: 'POST' }),
 
   async getNegotiation(id) {
     const n = await request<Negotiation>(`/negotiations/${enc(id)}`)
     // Be forgiving about fields the back end may leave out.
-    return { ...n, agreedPrice: n.agreedPrice ?? null, offers: n.offers ?? [] }
+    return {
+      ...n,
+      viewerRole: n.viewerRole ?? 'buyer',
+      counterpartName: n.counterpartName ?? '',
+      agreedPrice: n.agreedPrice ?? null,
+      offers: n.offers ?? [],
+    }
   },
 
   getMessages: (id, afterId) => request(`/negotiations/${enc(id)}/messages`, { query: { after: afterId } }),

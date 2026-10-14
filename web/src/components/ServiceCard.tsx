@@ -6,14 +6,12 @@ import type { Listing } from '../types/marketplace'
 type Props = {
   listing: Listing
   onNegotiate: (listing: Listing) => void
-  /** True while the negotiation is being created. */
+  /** True while the proposal is being sent. */
   busy?: boolean
-  /** False when the person is viewing as a seller: they can browse but not negotiate. */
-  canNegotiate?: boolean
 }
 
 // One search result. A locked seller already has an active negotiation (rule 3).
-export default function ServiceCard({ listing, onNegotiate, busy = false, canNegotiate = true }: Props) {
+export default function ServiceCard({ listing, onNegotiate, busy = false }: Props) {
   return (
     <article className="card service-card">
       <div className="service-card-body">
@@ -44,13 +42,9 @@ export default function ServiceCard({ listing, onNegotiate, busy = false, canNeg
           <button type="button" className="btn btn-lg" disabled>
             In negotiation with another buyer
           </button>
-        ) : !canNegotiate ? (
-          <button type="button" className="btn btn-lg" disabled>
-            Buyers only
-          </button>
         ) : (
           <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(listing)}>
-            {busy ? 'Starting...' : 'Negotiate'}
+            {busy ? 'Sending...' : 'Negotiate'}
           </button>
         )}
       </div>

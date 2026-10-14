@@ -5,11 +5,14 @@ import type { Api } from './types'
 import {
   DEMO_ENDED_ID,
   DEMO_NEGOTIATION_ID,
+  DEMO_SELLER_NEGOTIATION_ID,
   demoEndedNegotiation,
   demoEndedSession,
   demoMessages,
   demoNegotiation,
+  demoSellerNegotiation,
   listings,
+  openRequests,
 } from '../data/mock'
 import {
   buyerNegotiations,
@@ -19,6 +22,8 @@ import {
 } from '../data/dashboardMock'
 import type { BuyerRequest, SellerListing } from '../types/dashboard'
 import type { ChatMessage, Listing, SearchQuery } from '../types/marketplace'
+import type { Role } from '../types/me'
+import type { OpenRequest, Proposal, RequestQuery } from '../types/proposal'
 
 const delay = (ms = 250) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -46,9 +51,97 @@ function filterListings(items: Listing[], q: SearchQuery): Listing[] {
   return out
 }
 
+// ---- Who is looking. The real back end knows from the login; the demo is told by the header switch.
+let demoRole: Role = 'buyer'
+export function setMockRole(role: Role) {
+  demoRole = role
+}
+
+const DEMO_NAME = 'Alex Morgan'
+/** How long the demo counterpart takes to accept a proposal you sent. */
+const SIM_ACCEPT_MS = 4000
+
+type MockProposal = Omit<Proposal, 'direction'> & { forRole: Role; initiatedBy: Role }
+
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
+const negotiationFor = (role: Role) => (role === 'buyer' ? DEMO_NEGOTIATION_ID : DEMO_SELLER_NEGOTIATION_ID)
+
+// What a proposal shows about each side. Only public fields: never a target, maximum or floor.
+function listingInfo(role: Role, id: string): Proposal['listing'] | undefined {
+  if (role === 'buyer') {
+    const l = listings.find((x) => x.id === id)
+    return l && { id: l.id, title: l.title, sellerName: l.sellerName, listPrice: l.listPrice }
+  }
+  const l = sellerListings.find((x) => x.id === id)
+  return l && { id: l.id, title: l.title, sellerName: DEMO_NAME, listPrice: l.listPrice }
+}
+
+function requestInfo(role: Role, id: string): Proposal['request'] | undefined {
+  if (role === 'buyer') {
+    const r = buyerRequests.find((x) => x.id === id)
+    return r && { id: r.id, title: r.title, buyerName: DEMO_NAME, deliverables: r.deliverables, deadline: r.deadline }
+  }
+  const r = openRequests.find((x) => x.id === id)
+  return r && { id: r.id, title: r.title, buyerName: r.buyerName, deliverables: r.deliverables, deadline: r.deadline }
+}
+
+// A seller is locked while another negotiation is active (rule 4).
+function isLocked(role: Role, listingId: string): boolean {
+  return role === 'buyer'
+    ? Boolean(listings.find((l) => l.id === listingId)?.locked)
+    : sellerActiveNegotiation?.listingId === listingId
+}
+
+let proposals: MockProposal[] = [
+  // Something to accept in the demo, on each side.
+  {
+    id: 'p-seed-1',
+    forRole: 'buyer',
+    initiatedBy: 'seller',
+    status: 'pending',
+    createdAt: minutesAgo(40),
+    listing: listingInfo('buyer', 'l3')!,
+    request: requestInfo('buyer', 'r1')!,
+    negotiationId: null,
+  },
+  {
+    id: 'p-seed-2',
+    forRole: 'seller',
+    initiatedBy: 'buyer',
+    status: 'pending',
+    createdAt: minutesAgo(25),
+    listing: listingInfo('seller', 'l6')!,
+    request: requestInfo('seller', 'q1')!,
+    negotiationId: null,
+  },
+]
+
+const publicProposal = ({ forRole, initiatedBy, ...rest }: MockProposal): Proposal => ({
+  ...rest,
+  direction: initiatedBy === forRole ? 'outgoing' : 'incoming',
+})
+
+const patchProposal = (id: string, patch: Partial<MockProposal>) => {
+  proposals = proposals.map((p) => (p.id === id ? { ...p, ...patch } : p))
+}
+
+function filterRequests(items: OpenRequest[], q: RequestQuery): OpenRequest[] {
+  const kw = q.keyword.trim().toLowerCase()
+  const out = items.filter(
+    (r) =>
+      (!kw || `${r.title} ${r.deliverables} ${r.buyerName}`.toLowerCase().includes(kw)) &&
+      (!q.category || r.category === q.category),
+  )
+  if (q.sort === 'deadline') out.sort((a, b) => a.deadline.localeCompare(b.deadline))
+  return out
+}
+
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that negotiation.')
 
-const isKnownNegotiation = (id: string) => id === DEMO_NEGOTIATION_ID || id === DEMO_ENDED_ID || id === 'n1'
+const isKnownNegotiation = (id: string) =>
+  id === DEMO_NEGOTIATION_ID || id === DEMO_SELLER_NEGOTIATION_ID || id === DEMO_ENDED_ID || id === 'n1'
+
+const notYours = () => new ApiError(403, 'FORBIDDEN', 'This is not your negotiation.')
 
 export const mockApi: Api = {
   async getMe() {
@@ -62,19 +155,95 @@ export const mockApi: Api = {
     return filterListings(listings, q)
   },
 
-  async startNegotiation({ listingId, requestId }) {
+  async searchRequests(q) {
     await delay()
-    if (!requestId) throw new ApiError(400, 'VALIDATION', 'Choose one of your requests first.')
-    const listing = listings.find((l) => l.id === listingId)
-    if (listing?.locked) {
-      throw new ApiError(409, 'SELLER_LOCKED', 'This seller is already negotiating with another buyer.')
+    if (demoRole !== 'seller') throw new ApiError(403, 'FORBIDDEN', 'Only sellers can search buyer requests.')
+    return filterRequests(openRequests, q)
+  },
+
+  async sendProposal({ listingId, requestId }) {
+    await delay()
+    const role = demoRole
+    const listing = listingInfo(role, listingId)
+    const request = requestInfo(role, requestId)
+    if (!listing) throw new ApiError(404, 'NOT_FOUND', 'We could not find that listing.')
+    if (!request) throw new ApiError(404, 'NOT_FOUND', 'We could not find that request.')
+    if (isLocked(role, listingId)) {
+      throw new ApiError(
+        409,
+        'SELLER_LOCKED',
+        role === 'buyer'
+          ? 'This seller is already negotiating with another buyer.'
+          : 'This listing is already in a negotiation.',
+      )
     }
-    return { id: DEMO_NEGOTIATION_ID }
+    const samePair = proposals.find(
+      (p) => p.forRole === role && p.status === 'pending' && p.listing.id === listingId && p.request.id === requestId,
+    )
+    if (samePair) {
+      throw new ApiError(
+        400,
+        'VALIDATION',
+        samePair.initiatedBy === role
+          ? 'You already sent this proposal. Wait for an answer.'
+          : 'They already sent you a proposal for this. Open Proposals to accept it.',
+      )
+    }
+
+    const id = nextId('p')
+    proposals = [
+      { id, forRole: role, initiatedBy: role, status: 'pending', createdAt: new Date().toISOString(), listing, request, negotiationId: null },
+      ...proposals,
+    ]
+    // The demo counterpart accepts after a few seconds, so a presentation can show the whole flow.
+    setTimeout(() => {
+      if (proposals.find((p) => p.id === id)?.status === 'pending') {
+        patchProposal(id, { status: 'accepted', negotiationId: negotiationFor(role) })
+      }
+    }, SIM_ACCEPT_MS)
+    return { id }
+  },
+
+  async listProposals() {
+    await delay()
+    return proposals
+      .filter((p) => p.forRole === demoRole)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(publicProposal)
+  },
+
+  async acceptProposal(id) {
+    await delay()
+    const p = proposals.find((x) => x.id === id && x.forRole === demoRole)
+    if (!p) throw new ApiError(404, 'NOT_FOUND', 'We could not find that proposal.')
+    if (p.initiatedBy === demoRole) throw new ApiError(403, 'FORBIDDEN', 'You sent this proposal, so the other side answers it.')
+    if (p.status !== 'pending') throw new ApiError(400, 'VALIDATION', 'This proposal was already answered.')
+    if (isLocked(demoRole, p.listing.id)) {
+      throw new ApiError(409, 'SELLER_LOCKED', 'The listing is now in another negotiation, so this proposal cannot be accepted.')
+    }
+    patchProposal(id, { status: 'accepted', negotiationId: negotiationFor(demoRole) })
+    return publicProposal(proposals.find((x) => x.id === id)!)
+  },
+
+  async declineProposal(id) {
+    await delay()
+    const p = proposals.find((x) => x.id === id && x.forRole === demoRole)
+    if (!p) throw new ApiError(404, 'NOT_FOUND', 'We could not find that proposal.')
+    if (p.initiatedBy === demoRole) throw new ApiError(403, 'FORBIDDEN', 'You sent this proposal, so the other side answers it.')
+    if (p.status !== 'pending') throw new ApiError(400, 'VALIDATION', 'This proposal was already answered.')
+    patchProposal(id, { status: 'declined' })
+    return publicProposal(proposals.find((x) => x.id === id)!)
   },
 
   async getNegotiation(id) {
     await delay(150)
     if (!isKnownNegotiation(id)) throw notFound()
+    // The real back end picks the view from who is signed in. The demo picks it from the header switch.
+    if (id === DEMO_SELLER_NEGOTIATION_ID) {
+      if (demoRole !== 'seller') throw notYours()
+      return demoSellerNegotiation(id)
+    }
+    if (demoRole !== 'buyer') throw notYours()
     return id === DEMO_ENDED_ID ? demoEndedNegotiation(id) : demoNegotiation(id)
   },
 
@@ -92,7 +261,7 @@ export const mockApi: Api = {
     const clean = text.trim()
     if (!clean) throw new ApiError(400, 'VALIDATION', 'Write a message first.')
     if (clean.length > 500) throw new ApiError(400, 'VALIDATION', 'Messages can be at most 500 characters.')
-    const created: ChatMessage[] = [{ id: nextId('u'), from: 'buyer', sentAt: new Date().toISOString(), text: clean }]
+    const created: ChatMessage[] = [{ id: nextId('u'), from: demoRole, sentAt: new Date().toISOString(), text: clean }]
     if (PRICE_PATTERN.test(clean)) {
       created.push({ id: nextId('w'), from: 'system', tone: 'warning', text: PRICE_WARNING })
     }

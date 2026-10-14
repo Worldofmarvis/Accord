@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { api, errorMessage } from '../api'
 import Badge from '../components/Badge'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
@@ -116,7 +117,8 @@ export default function SellerDashboard() {
       {active && (
         <div className="notice notice-warning" role="status">
           You have an active negotiation (round {active.round} of {active.maxRounds}). Other buyers cannot start one
-          with you until it ends.
+          with you until it ends.{' '}
+          <Link to={`/negotiations/${encodeURIComponent(active.negotiationId)}`}>Open negotiation</Link>
         </div>
       )}
 

@@ -28,3 +28,9 @@
 .notice-inline {
   margin: 0;
 }
+
+.request-private {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

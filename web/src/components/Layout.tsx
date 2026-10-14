@@ -16,6 +16,7 @@ export default function Layout() {
     role === 'buyer'
       ? { to: '/buyer', label: 'Buyer dashboard' }
       : { to: '/seller', label: 'Seller dashboard' },
+    { to: '/proposals', label: 'Proposals' },
   ]
 
   function switchTo(next: Role) {

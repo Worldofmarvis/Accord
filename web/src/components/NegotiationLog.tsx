@@ -6,7 +6,9 @@ type Props = { negotiation: Negotiation }
 
 // Every offer is shown with the engine's verdict (rule 1: the engine enforces limits).
 export default function NegotiationLog({ negotiation }: Props) {
-  const { offers, round, waitingOn } = negotiation
+  const { offers, round, waitingOn, viewerRole } = negotiation
+  const agentName = (role: 'buyer' | 'seller') =>
+    role === viewerRole ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent'
   const sorted = [...offers].sort((a, b) => a.round - b.round || (a.role === 'buyer' ? -1 : 1))
   const tone = (r: number) => (r === round ? 'info' : 'neutral')
 
@@ -23,7 +25,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           <div className="log-body">
             <div className="log-title-row">
               <span className="log-title">
-                {o.role === 'buyer' ? 'Your agent' : 'Seller agent'} offered {usd(o.amount)}
+                {agentName(o.role)} offered {usd(o.amount)}
               </span>
               {!o.blocked && <span className="log-pass">Engine check: passed</span>}
             </div>
@@ -45,7 +47,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           </div>
           <div className="log-body">
             <div className="callout callout-pending">
-              Waiting for {waitingOn === 'seller' ? "the seller agent's" : "your agent's"} counter-offer...
+              Waiting for {waitingOn === viewerRole ? "your agent's" : `the ${waitingOn} agent's`} counter-offer...
             </div>
           </div>
         </div>

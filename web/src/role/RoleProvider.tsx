@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { api } from '../api'
+import { api, setDemoRole } from '../api'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { useAsync } from '../hooks/useAsync'
 import type { Role } from '../types/me'
@@ -53,6 +53,10 @@ export default function RoleProvider({ children }: { children: ReactNode }) {
 
   // A remembered side only counts if the account still has it.
   const role: Role = chosen && me.roles.includes(chosen) ? chosen : me.roles[0]
+
+  // The demo data answers differently for a buyer and a seller, and children ask for data as soon
+  // as they appear, so this is set during render (it is only a variable, so repeating it is harmless).
+  setDemoRole(role)
 
   function setRole(next: Role) {
     if (!me.roles.includes(next)) return

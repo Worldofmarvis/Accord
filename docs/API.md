@@ -21,7 +21,8 @@ The front end and back end owners should go through "Questions to agree on". Eac
 2. A seller's response never contains the buyer's `target` or `max`.
 3. Only the **engine** decides prices. Chat messages are stored as text and never read as offers.
 4. Maximum 3 rounds per negotiation. A seller has at most one active negotiation.
-5. The UI hiding a field is not protection: if the browser receives it, it is not private.
+5. Sellers who search buyer requests receive only public fields (see `OpenRequest`): never `target`, `max` or any hint of a budget. Buyers who search listings never receive `priceFloor`.
+6. The UI hiding a field is not protection: if the browser receives it, it is not private.
 
 ## Shared shapes
 
@@ -54,6 +55,27 @@ The front end and back end owners should go through "Questions to agree on". Eac
 // ChatMessage
 { "id": "m1", "from": "seller", "sentAt": "2026-10-12T10:42:00Z", "text": "Hi!" }           // from: "buyer" | "seller"
 { "id": "m4", "from": "system", "tone": "note", "text": "Scope noted: 5 pages, contact form, blog" }  // tone: "note" | "warning"
+
+// OpenRequest (what a seller sees when searching buyer needs: public fields only)
+{
+  "id": "q1",
+  "title": "Blog posts for a bakery",
+  "buyerName": "Sofia Alvarez",
+  "category": "Writing",
+  "deliverables": "3 posts of 600 words, friendly tone",
+  "deadline": "2026-10-28"
+}
+
+// Proposal (how every negotiation starts, see "Proposals")
+{
+  "id": "p1",
+  "direction": "incoming",         // relative to the caller: "incoming" = the other side sent it, "outgoing" = the caller sent it
+  "status": "pending",             // "pending" | "accepted" | "declined"
+  "createdAt": "2026-10-13T09:00:00Z",
+  "listing": { "id": "l3", "title": "Landing page and brand setup", "sellerName": "Priya Nair", "listPrice": 380 },
+  "request": { "id": "r1", "title": "5-page business website", "buyerName": "Alex Morgan", "deliverables": "5 pages, contact form, blog", "deadline": "2026-10-30" },
+  "negotiationId": null            // set once accepted; the id the caller opens at /negotiations/:id
+}
 ```
 
 ## Endpoints
@@ -72,14 +94,27 @@ This is a feature inside PayPal, so the front end builds **no login screen of it
 - `401 UNAUTHENTICATED` means the person is not signed in. The front end shows "Please sign in to continue" and nothing else.
 - This is only for menus. **Every other endpoint must still check the role itself** (privacy rules above): a buyer who opens a seller URL by hand must get `403 FORBIDDEN`, never the data.
 
-### Search and start
+### Search
 
 | Method and path | Purpose | Response |
 |---|---|---|
 | `GET /api/listings?keyword=&category=&maxPrice=&sort=` | Search. All parameters are optional (empty `category` means every category). `sort` is `match`, `price` or `delivery`. | `Listing[]` |
-| `POST /api/negotiations` body `{ "listingId": "l1", "requestId": "r1" }` | Start a negotiation. `requestId` is required: the buyer's target and max come from that request. Also used by "Start negotiation" on the rematch screen. | `201 { "id": "n1" }`. `409 SELLER_LOCKED` if the seller already has an active negotiation. |
+| `GET /api/requests?keyword=&category=&sort=` | **Sellers only** (`403 FORBIDDEN` for a buyer-only account). Search what buyers need. `sort` is `match` or `deadline` (soonest first). Never returns prices. | `OpenRequest[]` |
 
-### Live negotiation (buyer view)
+### Proposals (how a negotiation starts)
+
+A negotiation never starts on one side's click. Whoever starts sends a **proposal**, the other side accepts or declines, and only an accepted proposal creates the negotiation (and locks the seller's listing, rule 4). This is the same for both sides. It is also what "Negotiate" does on the search screens and on the rematch screen.
+
+| Method and path | Purpose | Response |
+|---|---|---|
+| `POST /api/proposals` body `{ "listingId": "l3", "requestId": "r1" }` | Send a proposal. The caller's role says who started it: a buyer must own `requestId`, a seller must own `listingId` (`403 FORBIDDEN` otherwise). `409 SELLER_LOCKED` if the listing is already in an active negotiation. `400 VALIDATION` if the same listing and request already have a pending proposal, in either direction (the message says whether to wait or to accept theirs). | `201 { "id": "p1" }` |
+| `GET /api/proposals` | Every proposal the caller sent or received, newest first. | `Proposal[]` |
+| `POST /api/proposals/:id/accept` | Only the receiving side, only while `pending`. Creates the negotiation. `409 SELLER_LOCKED` if the listing got locked in the meantime. | The updated `Proposal` (`status: "accepted"`, `negotiationId` set) |
+| `POST /api/proposals/:id/decline` | Only the receiving side, only while `pending`. | The updated `Proposal` (`status: "declined"`) |
+
+The buyer's `target` and `max` come from the proposal's request and the seller's `priceFloor` from its listing. The engine reads them on the server; they are never copied into a proposal.
+
+### Live negotiation (buyer and seller view)
 
 `GET /api/negotiations/:id`
 
@@ -87,13 +122,14 @@ This is a feature inside PayPal, so the front end builds **no login screen of it
 {
   "id": "n1",
   "status": "active",              // "active" | "agreed" | "no_agreement"
+  "viewerRole": "buyer",           // the caller's side: "buyer" | "seller"
   "service": "5-page business website",
-  "sellerName": "Maya Santos",
+  "counterpartName": "Maya Santos",   // the seller for a buyer, the buyer for a seller
   "listPrice": 500,
   "round": 2,
   "maxRounds": 3,
   "waitingOn": "seller",           // "buyer" | "seller" | null
-  "buyerLimits": { "target": 350, "max": 400 },   // the caller's own limits only
+  "buyerLimits": { "target": 350, "max": 400 },   // only for a buyer. A seller gets "sellerLimits": { "floor": 320 } instead. Never both.
   "agreedPrice": null,             // a number when status is "agreed", otherwise null
   "offers": [ /* Offer[] */ ]
 }
@@ -104,7 +140,7 @@ This is a feature inside PayPal, so the front end builds **no login screen of it
 | `GET /api/negotiations/:id/messages` | `ChatMessage[]`, oldest first. Supports `?after=<messageId>` to return only newer messages. |
 | `POST /api/negotiations/:id/messages` body `{ "text": "..." }` | Send a chat message. Returns a **list**: the stored message, followed by a `system` warning message if the text looks like a price. `ROUND_LIMIT` or `FORBIDDEN` errors use the error shape above. |
 
-The front end calls `GET /api/negotiations/:id` every 3 seconds while `status` is `active`, and stops when it is `agreed` or `no_agreement`. It then moves the buyer to `/negotiations/:id/pay` (agreed) or `/negotiations/:id/no-agreement`. The chat polls `GET .../messages?after=<last id>` the same way.
+The front end calls `GET /api/negotiations/:id` every 3 seconds while `status` is `active`, and stops when it is `agreed` or `no_agreement`. A buyer is then moved to `/negotiations/:id/pay` (agreed) or `/negotiations/:id/no-agreement`. A seller stays on the page, which shows the result ("Agreed at $380, waiting for the buyer" or "No agreement"). `403 FORBIDDEN` if the caller is neither the buyer nor the seller of that negotiation. The chat polls `GET .../messages?after=<last id>` the same way.
 
 ### Session ended
 
@@ -140,7 +176,7 @@ The front end calls `GET /api/negotiations/:id` every 3 seconds while `status` i
 | `PUT /api/seller/listings/:id` | Same fields. Returns the stored listing. `409 SELLER_LOCKED` if the listing is in an active negotiation. |
 | `GET /api/seller/active-negotiation` | `{ "negotiationId": "n1", "listingId": "l1", "round": 2, "maxRounds": 3 }` or `null` |
 
-The seller's own view of a negotiation (their limits, their agent) is **not designed yet**, so the front end does not link sellers to `/negotiations/:id`.
+The seller dashboard links `negotiationId` to `/negotiations/:id`, which shows the seller's own view (their floor, their agent).
 
 ### Not defined yet
 
@@ -160,7 +196,9 @@ Tick the box when the back end agrees, or edit the answer.
 | [ ] | **Round rules:** who goes first in each round, and does the engine move to the next round by itself? | The buyer agent goes first, then the seller agent. The engine moves to the next round on its own once both offers are stored. The front end only reads `round`, `waitingOn` and `status`. |
 | [ ] | **Rematch ranking:** does the API rank rematches, or does the front end? | The API ranks them (best first, at most 3). The front end shows them in the order received. |
 | [ ] | **Deal reached:** what does the API return when both agents agree, and which endpoint does the buyer call to approve? | `status` becomes `agreed` and `agreedPrice` is set. The front end then opens `/negotiations/:id/pay`. The approve and capture endpoints are agreed on Day 5. |
-| [ ] | **Which request does a negotiation use?** | The buyer picks one of their saved requests (the first by default) and the front end sends its `requestId` in `POST /api/negotiations`. A buyer without a request is sent to the buyer dashboard first. |
+| [ ] | **Proposals:** does every negotiation start with a proposal that the other side accepts? | Yes, for both directions (see "Proposals"). A buyer picks one of their saved requests (the first by default) and sends `{ listingId, requestId }`. A seller picks one of their listings that is not in a negotiation and sends the same body. There is no `POST /api/negotiations`. |
+| [ ] | **Proposal rules:** can a proposal expire or be withdrawn? When exactly does the seller lock begin? | No expiry and no withdraw button in the front end. The lock begins only when a proposal is **accepted**, so a seller can have several pending proposals and the first one accepted wins. If two are accepted at once, the second accept returns `409 SELLER_LOCKED`. |
+| [ ] | **Seller search:** does `GET /api/requests` return only public fields? | Yes: `id`, `title`, `buyerName`, `category`, `deliverables`, `deadline`. Never `target`, `max` or anything about budget. |
 | [ ] | **CORS and base URL:** | In development the front end calls `/api` on its own address and Vite forwards it to the back end (`API_PROXY_TARGET`), so no CORS is needed. In production set `VITE_API_URL` and enable CORS with credentials. |
 | [ ] | **Limits on messages:** maximum length and rate limit. | Front end stops at 500 characters. Back end should enforce its own limit and answer `400 VALIDATION`. |
 

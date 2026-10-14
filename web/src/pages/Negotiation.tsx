@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { errorMessage } from '../api'
 import { isFinalError } from '../api/errors'
 import Badge from '../components/Badge'
@@ -18,13 +18,15 @@ export default function Negotiation() {
   const navigate = useNavigate()
   const { negotiation: n, error, loading, retry } = useNegotiation(id)
 
-  // When the negotiation ends, move the buyer on to the matching screen.
+  // When the negotiation ends, move a buyer on to the matching screen. A seller stays here and sees the result.
   const status = n?.status
+  const viewerRole = n?.viewerRole
   useEffect(() => {
+    if (viewerRole !== 'buyer') return
     const path = `/negotiations/${encodeURIComponent(id)}`
     if (status === 'agreed') navigate(`${path}/pay`, { replace: true })
     if (status === 'no_agreement') navigate(`${path}/no-agreement`, { replace: true })
-  }, [status, id, navigate])
+  }, [status, viewerRole, id, navigate])
 
   if (!n) {
     return (
@@ -35,14 +37,45 @@ export default function Negotiation() {
   }
 
   if (n.status !== 'active') {
+    if (n.viewerRole === 'buyer') {
+      return (
+        <div className="page-stack">
+          <LoadingCard label="This negotiation has ended. Taking you to the result..." />
+        </div>
+      )
+    }
     return (
       <div className="page-stack">
-        <LoadingCard label="This negotiation has ended. Taking you to the result..." />
+        <section aria-label="Result" className="card">
+          {n.status === 'agreed' ? (
+            <>
+              <h1>You reached an agreement</h1>
+              <p>
+                {n.service} with {n.counterpartName}
+                {n.agreedPrice != null && <> at {usd(n.agreedPrice)}</>}. The buyer now reviews the agreed price and
+                pays. Nothing is final until they approve.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1>No agreement</h1>
+              <p>
+                The negotiation with {n.counterpartName} ended after {n.maxRounds} rounds. Nothing was charged, and
+                your listing is open to new proposals again.
+              </p>
+            </>
+          )}
+          <Link to="/seller" className="btn btn-secondary btn-lg">
+            Back to my listings
+          </Link>
+        </section>
       </div>
     )
   }
 
+  const viewer = n.viewerRole
   const latest = (role: Role) => [...n.offers].reverse().find((o) => o.role === role)
+  const limit = viewer === 'buyer' ? n.buyerLimits?.max : n.sellerLimits?.floor
 
   return (
     <div className="page-stack page-wide">
@@ -50,12 +83,15 @@ export default function Negotiation() {
         <div>
           <h1>{n.service}</h1>
           <p className="muted">
-            Negotiating with {n.sellerName}. List price {usd(n.listPrice)}.
+            Negotiating with {n.counterpartName}. {viewer === 'seller' ? 'Your list price' : 'List price'}{' '}
+            {usd(n.listPrice)}.
           </p>
         </div>
         <div className="neg-status">
           <Badge tone="info">Negotiation active</Badge>
-          <span className="muted caption">This seller is locked for other buyers</span>
+          <span className="muted caption">
+            {viewer === 'buyer' ? 'This seller is locked for other buyers' : 'Your listing is locked for other buyers'}
+          </span>
         </div>
       </div>
 
@@ -72,13 +108,22 @@ export default function Negotiation() {
       <div className="neg-layout">
         <div className="neg-main">
           <div className="neg-agents">
-            <OfferCard role="buyer" currentRound={n.round} offer={latest('buyer')} limits={n.buyerLimits} />
-            <OfferCard role="seller" currentRound={n.round} offer={latest('seller')} />
+            {(['buyer', 'seller'] as const).map((role) => (
+              <OfferCard
+                key={role}
+                role={role}
+                viewerRole={viewer}
+                currentRound={n.round}
+                offer={latest(role)}
+                buyerLimits={n.buyerLimits}
+                sellerLimits={n.sellerLimits}
+              />
+            ))}
           </div>
-          <PriceRange offers={n.offers} buyerMax={n.buyerLimits.max} />
+          {limit != null && <PriceRange offers={n.offers} viewerRole={viewer} limit={limit} />}
           <NegotiationLog negotiation={n} />
         </div>
-        <ChatPanel negotiationId={n.id} sellerName={n.sellerName} />
+        <ChatPanel negotiationId={n.id} counterpartName={n.counterpartName} viewerRole={viewer} />
       </div>
     </div>
   )

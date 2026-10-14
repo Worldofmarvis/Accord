@@ -4,19 +4,22 @@ import { useChat } from '../hooks/useChat'
 import { formatTime } from '../lib/format'
 import { LockIcon } from './icons'
 
-type Props = { negotiationId: string; sellerName: string }
+import type { Role } from '../types/marketplace'
+
+type Props = { negotiationId: string; counterpartName: string; viewerRole: Role }
 
 const MAX_LENGTH = 500
 
 // Chat is for scope only (rule 5). Messages go to the API as plain text and the
 // server decides whether to add a warning: this component never judges the text.
-export default function ChatPanel({ negotiationId, sellerName }: Props) {
+export default function ChatPanel({ negotiationId, counterpartName, viewerRole }: Props) {
   const { messages, loading, error, send } = useChat(negotiationId)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
-  const firstName = sellerName.split(' ')[0]
+  const firstName = counterpartName.split(' ')[0]
+  const otherRole = viewerRole === 'buyer' ? 'seller' : 'buyer'
 
   // Keep the newest message in view.
   useEffect(() => {
@@ -69,11 +72,11 @@ export default function ChatPanel({ negotiationId, sellerName }: Props) {
               </div>
             )
           }
-          const mine = m.from === 'buyer'
+          const mine = m.from === viewerRole
           return (
             <div key={m.id} className={`chat-msg ${mine ? 'is-mine' : ''}`}>
               <div className="muted caption chat-meta">
-                {mine ? 'You' : `${firstName}, seller`}. {formatTime(m.sentAt)}
+                {mine ? 'You' : `${firstName}, ${otherRole}`}. {formatTime(m.sentAt)}
               </div>
               <div className="chat-bubble">{m.text}</div>
             </div>
