@@ -111,8 +111,8 @@ This is a feature inside PayPal, so the front end builds **no login screen of it
 
 | Method and path | Purpose | Response |
 |---|---|---|
-| `GET /api/listings?keyword=&category=&maxPrice=&sort=` | Search. All parameters are optional (empty `category` means every category). `sort` is `match`, `price` or `delivery`. | `Listing[]` |
-| `GET /api/requests?keyword=&category=&sort=` | **Sellers only** (`403 FORBIDDEN` for a buyer-only account). Search what buyers need. `sort` is `match` or `deadline` (soonest first). Never returns prices. | `OpenRequest[]` |
+| `GET /api/listings?keyword=&category=&maxPrice=&sort=` | Search. All parameters are optional (empty `category` means every category). `keyword` is free text: every word must match the title, tags, category, description or seller name. `sort` is `match` (most relevant first: title and tag hits rank above description hits), `price` or `delivery`. The front end sends a request as the person types (after a short pause), so keep it fast. | `Listing[]` |
+| `GET /api/requests?keyword=&category=&sort=` | **Sellers only** (`403 FORBIDDEN` for a buyer-only account). Search what buyers need. `keyword` matches title, category, deliverables or buyer name (every word must match). `sort` is `match` (most relevant first) or `deadline` (soonest first). Never returns prices. | `OpenRequest[]` |
 
 ### Proposals (how a negotiation starts)
 

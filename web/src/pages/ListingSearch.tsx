@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../api'
+import CategoryChips from '../components/CategoryChips'
+import SearchInput from '../components/SearchInput'
 import ServiceCard from '../components/ServiceCard'
 import StartNotice from '../components/StartNotice'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
-import { SearchIcon } from '../components/icons'
 import { useAsync } from '../hooks/useAsync'
+import { useDebouncedText } from '../hooks/useDebouncedText'
 import { useStartNegotiation } from '../hooks/useStartNegotiation'
 import { categories } from '../lib/categories'
 import { parsePrice } from '../lib/forms'
@@ -12,37 +14,27 @@ import type { SearchSort } from '../types/marketplace'
 
 type Filters = { keyword: string; category: string; maxPrice: string }
 
+const NO_FILTERS: Filters = { keyword: '', category: '', maxPrice: '' }
+
 export default function ListingSearch() {
-  // The first search matches the demo scenario. Clear the boxes to see everything.
-  const [draft, setDraft] = useState<Filters>({ keyword: 'website', category: 'Web development', maxPrice: '500' })
-  const [applied, setApplied] = useState(draft)
+  // Every control applies as it changes: category right away, typed text after a short pause.
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS)
   const [sort, setSort] = useState<SearchSort>('match')
+  const keyword = useDebouncedText(filters.keyword.trim())
+  const maxPrice = parsePrice(useDebouncedText(filters.maxPrice))
 
   const search = useAsync(
-    () =>
-      api.searchListings({
-        keyword: applied.keyword.trim(),
-        category: applied.category,
-        maxPrice: parsePrice(applied.maxPrice),
-        sort,
-      }),
-    [applied, sort],
+    () => api.searchListings({ keyword, category: filters.category, maxPrice, sort }),
+    [keyword, filters.category, maxPrice, sort],
   )
   const starter = useStartNegotiation('buyer', search.reload)
 
   const results = search.data ?? []
+  const hasFilters = filters.keyword !== '' || filters.category !== '' || filters.maxPrice !== ''
+  const change = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch }))
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    setApplied(draft)
-  }
-
-  // Pressing the chip that is already active shows every category again.
-  function quickFilter(category: string) {
-    const next = { ...draft, category: applied.category === category ? '' : category }
-    setDraft(next)
-    setApplied(next)
-  }
+  // Pressing Enter just keeps the page from reloading; the results are already live.
+  const submit = (e: FormEvent) => e.preventDefault()
 
   return (
     <div className="page-stack">
@@ -51,33 +43,15 @@ export default function ListingSearch() {
         <p className="muted">Find a freelancer, then let your agent negotiate the price in up to 3 rounds. The seller accepts your proposal before it starts.</p>
       </div>
 
-      <form className="card search-filters" aria-label="Search filters" onSubmit={submit}>
+      <form className="card search-filters" role="search" aria-label="Search filters" onSubmit={submit}>
         <div className="search-row">
-          <div className="field search-kw">
-            <label htmlFor="kw">Keyword</label>
-            <input
-              id="kw"
-              className="input"
-              type="text"
-              placeholder="website, logo, blog post"
-              value={draft.keyword}
-              onChange={(e) => setDraft({ ...draft, keyword: e.target.value })}
-            />
-          </div>
-          <div className="field search-cat">
-            <label htmlFor="cat">Category</label>
-            <select
-              id="cat"
-              className="input"
-              value={draft.category}
-              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+          <SearchInput
+            id="kw"
+            label="Search"
+            placeholder="Skill, project or seller name"
+            value={filters.keyword}
+            onChange={(keyword) => change({ keyword })}
+          />
           <div className="field search-price">
             <label htmlFor="maxp">Maximum list price (USD)</label>
             <input
@@ -86,28 +60,18 @@ export default function ListingSearch() {
               type="text"
               inputMode="numeric"
               placeholder="No limit"
-              value={draft.maxPrice}
-              onChange={(e) => setDraft({ ...draft, maxPrice: e.target.value })}
+              value={filters.maxPrice}
+              onChange={(e) => change({ maxPrice: e.target.value })}
             />
           </div>
-          <button type="submit" className="btn btn-primary btn-lg">
-            <SearchIcon />
-            Search
-          </button>
         </div>
-        <div className="search-quick">
-          <span className="muted small">Quick filter</span>
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`chip${applied.category === c ? ' is-active' : ''}`}
-              aria-pressed={applied.category === c}
-              onClick={() => quickFilter(c)}
-            >
-              {c}
+        <div className="search-filter-bar">
+          <CategoryChips categories={categories} value={filters.category} onChange={(category) => change({ category })} />
+          {hasFilters && (
+            <button type="button" className="btn-link" onClick={() => setFilters(NO_FILTERS)}>
+              Clear filters
             </button>
-          ))}
+          )}
         </div>
       </form>
 
@@ -139,7 +103,8 @@ export default function ListingSearch() {
           {search.data ? (
             <>
               {results.length} {results.length === 1 ? 'result' : 'results'}
-              {applied.keyword.trim() && <> for "{applied.keyword.trim()}"</>}
+              {keyword && <> for "{keyword}"</>}
+              {filters.category && <> in {filters.category}</>}
             </>
           ) : (
             'Results'
@@ -162,11 +127,18 @@ export default function ListingSearch() {
         </div>
       </div>
 
-      <section aria-label="Results" aria-busy={search.loading} className="search-results">
+      <section aria-label="Results" aria-busy={search.loading} className={`search-results${search.loading && search.data ? ' is-loading' : ''}`}>
         {search.error != null && <ErrorCard error={search.error} onRetry={search.reload} />}
         {search.error == null && search.loading && !search.data && <LoadingCard label="Searching..." />}
         {search.error == null && search.data && results.length === 0 && (
-          <p className="card muted">No services match. Try a different keyword or a higher price.</p>
+          <div className="card search-empty">
+            <p className="muted">No services match these filters. Try fewer words or a higher price.</p>
+            {hasFilters && (
+              <button type="button" className="btn btn-secondary" onClick={() => setFilters(NO_FILTERS)}>
+                Clear filters
+              </button>
+            )}
+          </div>
         )}
         {search.error == null &&
           results.map((l) => (

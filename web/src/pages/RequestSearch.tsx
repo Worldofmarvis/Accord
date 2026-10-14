@@ -1,40 +1,38 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../api'
+import CategoryChips from '../components/CategoryChips'
 import RequestCard from '../components/RequestCard'
+import SearchInput from '../components/SearchInput'
 import StartNotice from '../components/StartNotice'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
-import { SearchIcon } from '../components/icons'
 import { useAsync } from '../hooks/useAsync'
+import { useDebouncedText } from '../hooks/useDebouncedText'
 import { useStartNegotiation } from '../hooks/useStartNegotiation'
 import { categories } from '../lib/categories'
 import type { RequestSort } from '../types/proposal'
 
 type Filters = { keyword: string; category: string }
 
+const NO_FILTERS: Filters = { keyword: '', category: '' }
+
 // What a seller sees on the Search tab: buyer requests, with no prices (rule 5).
 export default function RequestSearch() {
-  const [draft, setDraft] = useState<Filters>({ keyword: '', category: '' })
-  const [applied, setApplied] = useState(draft)
+  // Every control applies as it changes: category right away, typed text after a short pause.
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS)
   const [sort, setSort] = useState<RequestSort>('match')
+  const keyword = useDebouncedText(filters.keyword.trim())
 
   const search = useAsync(
-    () => api.searchRequests({ keyword: applied.keyword.trim(), category: applied.category, sort }),
-    [applied, sort],
+    () => api.searchRequests({ keyword, category: filters.category, sort }),
+    [keyword, filters.category, sort],
   )
   const starter = useStartNegotiation('seller')
   const results = search.data ?? []
+  const hasFilters = filters.keyword !== '' || filters.category !== ''
+  const change = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch }))
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    setApplied(draft)
-  }
-
-  // Pressing the chip that is already active shows every category again.
-  function quickFilter(category: string) {
-    const next = { ...draft, category: applied.category === category ? '' : category }
-    setDraft(next)
-    setApplied(next)
-  }
+  // Pressing Enter just keeps the page from reloading; the results are already live.
+  const submit = (e: FormEvent) => e.preventDefault()
 
   return (
     <div className="page-stack">
@@ -46,51 +44,23 @@ export default function RequestSearch() {
         </p>
       </div>
 
-      <form className="card search-filters" aria-label="Search filters" onSubmit={submit}>
+      <form className="card search-filters" role="search" aria-label="Search filters" onSubmit={submit}>
         <div className="search-row">
-          <div className="field search-kw">
-            <label htmlFor="kw">Keyword</label>
-            <input
-              id="kw"
-              className="input"
-              type="text"
-              placeholder="website, logo, blog post"
-              value={draft.keyword}
-              onChange={(e) => setDraft({ ...draft, keyword: e.target.value })}
-            />
-          </div>
-          <div className="field search-cat">
-            <label htmlFor="cat">Category</label>
-            <select
-              id="cat"
-              className="input"
-              value={draft.category}
-              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-            >
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="btn btn-primary btn-lg">
-            <SearchIcon />
-            Search
-          </button>
+          <SearchInput
+            id="kw"
+            label="Search"
+            placeholder="Project, deliverable or buyer name"
+            value={filters.keyword}
+            onChange={(keyword) => change({ keyword })}
+          />
         </div>
-        <div className="search-quick">
-          <span className="muted small">Quick filter</span>
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`chip${applied.category === c ? ' is-active' : ''}`}
-              aria-pressed={applied.category === c}
-              onClick={() => quickFilter(c)}
-            >
-              {c}
+        <div className="search-filter-bar">
+          <CategoryChips categories={categories} value={filters.category} onChange={(category) => change({ category })} />
+          {hasFilters && (
+            <button type="button" className="btn-link" onClick={() => setFilters(NO_FILTERS)}>
+              Clear filters
             </button>
-          ))}
+          )}
         </div>
       </form>
 
@@ -122,7 +92,8 @@ export default function RequestSearch() {
           {search.data ? (
             <>
               {results.length} {results.length === 1 ? 'request' : 'requests'}
-              {applied.keyword.trim() && <> for "{applied.keyword.trim()}"</>}
+              {keyword && <> for "{keyword}"</>}
+              {filters.category && <> in {filters.category}</>}
             </>
           ) : (
             'Requests'
@@ -144,11 +115,18 @@ export default function RequestSearch() {
         </div>
       </div>
 
-      <section aria-label="Results" aria-busy={search.loading} className="search-results">
+      <section aria-label="Results" aria-busy={search.loading} className={`search-results${search.loading && search.data ? ' is-loading' : ''}`}>
         {search.error != null && <ErrorCard error={search.error} onRetry={search.reload} />}
         {search.error == null && search.loading && !search.data && <LoadingCard label="Searching..." />}
         {search.error == null && search.data && results.length === 0 && (
-          <p className="card muted">No requests match. Try a different keyword or category.</p>
+          <div className="card search-empty">
+            <p className="muted">No requests match these filters. Try fewer words or another category.</p>
+            {hasFilters && (
+              <button type="button" className="btn btn-secondary" onClick={() => setFilters(NO_FILTERS)}>
+                Clear filters
+              </button>
+            )}
+          </div>
         )}
         {search.error == null &&
           results.map((r) => (

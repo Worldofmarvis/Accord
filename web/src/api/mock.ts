@@ -3,6 +3,7 @@
 import { ApiError } from './errors'
 import type { Api } from './types'
 import { approvalStatus } from '../lib/approval'
+import { relevance } from '../lib/search'
 import {
   DEMO_AGREED_ID,
   DEMO_ENDED_ID,
@@ -45,16 +46,24 @@ let counter = 0
 const nextId = (prefix: string) => `${prefix}-${Date.now()}-${++counter}`
 
 function filterListings(items: Listing[], q: SearchQuery): Listing[] {
-  const kw = q.keyword.trim().toLowerCase()
-  const out = items.filter(
-    (l) =>
-      (!kw || `${l.title} ${l.description} ${l.sellerName} ${l.tags.join(' ')}`.toLowerCase().includes(kw)) &&
-      (!q.category || l.categories.includes(q.category)) &&
-      (q.maxPrice === null || l.listPrice <= q.maxPrice),
-  )
-  if (q.sort === 'price') out.sort((a, b) => a.listPrice - b.listPrice)
-  if (q.sort === 'delivery') out.sort((a, b) => a.deliveryDays - b.deliveryDays)
-  return out
+  const scored = items
+    .filter((l) => (!q.category || l.categories.includes(q.category)) && (q.maxPrice === null || l.listPrice <= q.maxPrice))
+    .map((l) => ({
+      l,
+      score: relevance(q.keyword, [
+        { text: l.title, weight: 5 },
+        { text: l.tags.join(' '), weight: 4 },
+        { text: l.categories.join(' '), weight: 3 },
+        { text: l.description, weight: 2 },
+        { text: l.sellerName, weight: 1 },
+      ]),
+    }))
+    .filter((x): x is { l: Listing; score: number } => x.score !== null)
+  // "Best match" ranks by relevance; the sort is stable, so equal scores keep their original order.
+  if (q.sort === 'price') scored.sort((a, b) => a.l.listPrice - b.l.listPrice)
+  else if (q.sort === 'delivery') scored.sort((a, b) => a.l.deliveryDays - b.l.deliveryDays)
+  else scored.sort((a, b) => b.score - a.score)
+  return scored.map((x) => x.l)
 }
 
 // ---- Who is looking. The real back end knows from the login; the demo is told by the header switch.
@@ -166,14 +175,21 @@ function acceptProposalNow(role: Role, p: MockProposal) {
 }
 
 function filterRequests(items: OpenRequest[], q: RequestQuery): OpenRequest[] {
-  const kw = q.keyword.trim().toLowerCase()
-  const out = items.filter(
-    (r) =>
-      (!kw || `${r.title} ${r.deliverables} ${r.buyerName}`.toLowerCase().includes(kw)) &&
-      (!q.category || r.category === q.category),
-  )
-  if (q.sort === 'deadline') out.sort((a, b) => a.deadline.localeCompare(b.deadline))
-  return out
+  const scored = items
+    .filter((r) => !q.category || r.category === q.category)
+    .map((r) => ({
+      r,
+      score: relevance(q.keyword, [
+        { text: r.title, weight: 5 },
+        { text: r.category, weight: 3 },
+        { text: r.deliverables, weight: 2 },
+        { text: r.buyerName, weight: 1 },
+      ]),
+    }))
+    .filter((x): x is { r: OpenRequest; score: number } => x.score !== null)
+  if (q.sort === 'deadline') scored.sort((a, b) => a.r.deadline.localeCompare(b.r.deadline))
+  else scored.sort((a, b) => b.score - a.score)
+  return scored.map((x) => x.r)
 }
 
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that negotiation.')
