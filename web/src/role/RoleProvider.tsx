@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { api } from '../api'
+import { api, ApiError, USE_MOCK } from '../api'
+import DemoLogin from '../components/DemoLogin'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { useAsync } from '../hooks/useAsync'
 import type { Role } from '../types/me'
@@ -26,6 +27,14 @@ export default function RoleProvider({ children }: { children: ReactNode }) {
   const [chosen, setChosen] = useState<Role | null>(remembered)
 
   if (meState.error != null && !meState.data) {
+    // Nobody is signed in yet (or the saved user is unknown): let the person pick a demo user.
+    if (!USE_MOCK && meState.error instanceof ApiError && meState.error.code === 'UNAUTHENTICATED') {
+      return (
+        <div className="shell-main">
+          <DemoLogin onChosen={meState.reload} />
+        </div>
+      )
+    }
     return (
       <div className="shell-main">
         <ErrorCard error={meState.error} onRetry={meState.reload} />

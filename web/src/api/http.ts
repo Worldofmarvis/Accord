@@ -1,5 +1,6 @@
 import { API_URL } from './config'
 import { ApiError, type ApiErrorCode } from './errors'
+import { getUserId } from './session'
 
 const KNOWN_CODES: ApiErrorCode[] = [
   'VALIDATION',
@@ -30,8 +31,9 @@ type Options = {
 
 /**
  * One place for every real server call.
- * - Sends the session cookie (credentials: "include").
- * - Turns the error shape from docs/API.md into an ApiError.
+ * - Sends the signed-in demo user in the X-User-Id header (see session.ts).
+ * - Turns an error body into an ApiError. Both shapes are accepted: { error: "text" } (the back end
+ *   today) and { error: { code, message } } (docs/API.md).
  */
 export async function request<T>(path: string, { method = 'GET', query, body }: Options = {}): Promise<T> {
   const params = new URLSearchParams()
@@ -41,13 +43,14 @@ export async function request<T>(path: string, { method = 'GET', query, body }: 
   const qs = params.toString()
   const url = `${API_URL}${path}${qs ? `?${qs}` : ''}`
 
+  const userId = getUserId()
   let res: Response
   try {
     res = await fetch(url, {
       method,
-      credentials: 'include',
       headers: {
         Accept: 'application/json',
+        ...(userId ? { 'X-User-Id': userId } : {}),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -57,17 +60,21 @@ export async function request<T>(path: string, { method = 'GET', query, body }: 
   }
 
   if (!res.ok) {
-    let raw: { error?: { code?: unknown; message?: unknown } } | null = null
+    let raw: { error?: unknown } | null = null
     try {
       raw = await res.json()
     } catch {
-      // The body was not JSON (for example a proxy error page).
+      // The body was not JSON (for example a proxy error page, or a route the server doesn't have yet).
     }
+    const err = raw?.error
+    const detail = err && typeof err === 'object' ? (err as { code?: unknown; message?: unknown }) : null
+    const text = typeof err === 'string' ? err : typeof detail?.message === 'string' ? detail.message : ''
     const message =
-      typeof raw?.error?.message === 'string' && raw.error.message
-        ? raw.error.message
-        : `The server returned an error (${res.status}).`
-    throw new ApiError(res.status, codeFor(res.status, raw?.error?.code), message)
+      text ||
+      (res.status === 404 && raw === null
+        ? 'This part of the server is not available yet.'
+        : `The server returned an error (${res.status}).`)
+    throw new ApiError(res.status, codeFor(res.status, detail?.code), message)
   }
 
   if (res.status === 204) return undefined as T

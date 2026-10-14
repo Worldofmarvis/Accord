@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api } from '../api'
 import ServiceCard from '../components/ServiceCard'
 import StartNotice from '../components/StartNotice'
@@ -12,6 +12,9 @@ import { parsePrice } from '../lib/forms'
 import type { SearchSort } from '../types/marketplace'
 
 type Filters = { keyword: string; category: string; maxPrice: string }
+
+// How often results re-check which sellers are locked (rule 3), so a lock shows up without a click.
+const LOCK_REFRESH_MS = 5000
 
 export default function Search() {
   // The first search matches the demo scenario. Clear the boxes to see everything.
@@ -29,6 +32,24 @@ export default function Search() {
       }),
     [applied, sort],
   )
+  // Refresh the results on a timer and when the tab comes back. Skipped while an error card is
+  // showing (it has its own Retry), so the card doesn't flicker.
+  const latest = useRef({ reload: search.reload, failed: search.error != null })
+  useEffect(() => {
+    latest.current = { reload: search.reload, failed: search.error != null }
+  })
+  useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden && !latest.current.failed) latest.current.reload()
+    }
+    const timer = setInterval(refresh, LOCK_REFRESH_MS)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [])
+
   const { role } = useRole()
   const isBuyer = role === 'buyer'
   const starter = useStartNegotiation(search.reload, isBuyer)

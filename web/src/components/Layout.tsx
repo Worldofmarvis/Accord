@@ -1,5 +1,6 @@
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
 import { USE_MOCK } from '../api'
+import { clearUserId } from '../api/session'
 import { useRole } from '../role/useRole'
 import type { Role } from '../types/me'
 
@@ -51,6 +52,18 @@ export default function Layout() {
             <span className="role-switch-label">{sideLabel[role]}</span>
           )}
           <span className="role-name">{me.name}</span>
+          {!USE_MOCK && (
+            <button
+              type="button"
+              className="role-link"
+              onClick={() => {
+                clearUserId()
+                window.location.reload()
+              }}
+            >
+              Switch user
+            </button>
+          )}
         </div>
       </header>
       <main className="shell-main">
