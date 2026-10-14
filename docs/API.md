@@ -140,7 +140,12 @@ The front end calls `GET /api/negotiations/:id` every 3 seconds while `status` i
 | `PUT /api/seller/listings/:id` | Same fields. Returns the stored listing. `409 SELLER_LOCKED` if the listing is in an active negotiation. |
 | `GET /api/seller/active-negotiation` | `{ "negotiationId": "n1", "listingId": "l1", "round": 2, "maxRounds": 3 }` or `null` |
 
-The seller's own view of a negotiation (their limits, their agent) is **not designed yet**, so the front end does not link sellers to `/negotiations/:id`.
+**The seller's view of a negotiation.** The seller opens `/negotiations/:id` from the active-negotiation notice on their dashboard. It uses the same endpoints as the buyer, and the API answers according to who is calling:
+
+- `GET /api/negotiations/:id` for the seller's session returns the same shape, **without `buyerLimits`**, and with `buyerName` (for example `"Sam Lee"`). `offers` carry the amounts that counted, so nothing about the buyer's limits can be worked out from them.
+- `GET` and `POST .../messages` set `from` (`"buyer"` or `"seller"`) from the caller's session. The front end never sends it.
+- A caller who is neither the buyer nor the seller of that negotiation gets `403 FORBIDDEN`.
+- The seller's own agent card and floor are not shown yet. The seller sees the round counter, the log and the chat.
 
 ### Not defined yet
 

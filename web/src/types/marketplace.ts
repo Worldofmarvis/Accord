@@ -37,11 +37,13 @@ export type Negotiation = {
   status: NegotiationStatus
   service: string
   sellerName: string
+  /** Sent in the seller's view only. */
+  buyerName?: string
   listPrice: number
   round: number
   maxRounds: number
-  /** Only the buyer's own limits are ever sent to the buyer's browser. */
-  buyerLimits: { target: number; max: number }
+  /** Only the buyer's own limits, and only in the buyer's view. The seller's view has none (docs/API.md). */
+  buyerLimits?: { target: number; max: number }
   /** Set when `status` is "agreed", otherwise null. */
   agreedPrice: number | null
   offers: Offer[]

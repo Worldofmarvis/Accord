@@ -46,6 +46,15 @@ function filterListings(items: Listing[], q: SearchQuery): Listing[] {
   return out
 }
 
+// Which side the demo person is viewing as (RoleProvider remembers it). The real server reads it from the session.
+function viewingAs(): 'buyer' | 'seller' {
+  try {
+    return localStorage.getItem('accord.role') === 'seller' ? 'seller' : 'buyer'
+  } catch {
+    return 'buyer'
+  }
+}
+
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that negotiation.')
 
 const isKnownNegotiation = (id: string) => id === DEMO_NEGOTIATION_ID || id === DEMO_ENDED_ID || id === 'n1'
@@ -92,7 +101,7 @@ export const mockApi: Api = {
     const clean = text.trim()
     if (!clean) throw new ApiError(400, 'VALIDATION', 'Write a message first.')
     if (clean.length > 500) throw new ApiError(400, 'VALIDATION', 'Messages can be at most 500 characters.')
-    const created: ChatMessage[] = [{ id: nextId('u'), from: 'buyer', sentAt: new Date().toISOString(), text: clean }]
+    const created: ChatMessage[] = [{ id: nextId('u'), from: viewingAs(), sentAt: new Date().toISOString(), text: clean }]
     if (PRICE_PATTERN.test(clean)) {
       created.push({ id: nextId('w'), from: 'system', tone: 'warning', text: PRICE_WARNING })
     }

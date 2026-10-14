@@ -1,14 +1,15 @@
 import Badge from './Badge'
 import { usd } from '../lib/format'
-import type { Negotiation } from '../types/marketplace'
+import type { Negotiation, Role } from '../types/marketplace'
 
-type Props = { negotiation: Negotiation }
+type Props = { negotiation: Negotiation; /** Who is looking. Defaults to the buyer. */ viewer?: Role }
 
 // Every offer is shown with the engine's verdict (rule 1: the engine enforces limits).
-export default function NegotiationLog({ negotiation }: Props) {
+export default function NegotiationLog({ negotiation, viewer = 'buyer' }: Props) {
   const { offers, round, waitingOn } = negotiation
   const sorted = [...offers].sort((a, b) => a.round - b.round || (a.role === 'buyer' ? -1 : 1))
   const tone = (r: number) => (r === round ? 'info' : 'neutral')
+  const agentName = (role: Role) => (role === viewer ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent')
 
   return (
     <section aria-label="Negotiation log" className="card">
@@ -23,7 +24,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           <div className="log-body">
             <div className="log-title-row">
               <span className="log-title">
-                {o.role === 'buyer' ? 'Your agent' : 'Seller agent'} offered {usd(o.amount)}
+                {agentName(o.role)} offered {usd(o.amount)}
               </span>
               {!o.blocked && <span className="log-pass">Engine check: passed</span>}
             </div>
@@ -45,7 +46,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           </div>
           <div className="log-body">
             <div className="callout callout-pending">
-              Waiting for {waitingOn === 'seller' ? "the seller agent's" : "your agent's"} counter-offer...
+              Waiting for {waitingOn === viewer ? "your agent's" : waitingOn === 'seller' ? "the seller agent's" : "the buyer agent's"} counter-offer...
             </div>
           </div>
         </div>
