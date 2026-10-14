@@ -182,3 +182,22 @@ All server calls live in `web/src/api/`. Screens never call `fetch` directly and
 | `VITE_POLL_MS=3000` | Polling interval. |
 
 Copy `web/.env.example` to `web/.env` and edit it.
+
+
+## Running against the current back end (v0.2)
+
+The back end in `backend/` (see its `openapi.yaml`) is an early version. Until it follows this document, the front end translates its shapes in **one place**, `web/src/api/real.ts` (and `http.ts` for errors). Nothing else in the front end knows about the differences.
+
+| This document | Back end v0.2 | What the front end does |
+|---|---|---|
+| Base path `/api` | No prefix (`/me`, `/listings/search`) | The Vite proxy removes `/api` (`API_STRIP_PREFIX=true`). In production set `VITE_API_URL` to the back end's own URL |
+| Signed in by session cookie | `X-User-Id` header, demo users from `GET /users/demo` | A demo sign-in screen. The chosen id is kept per browser tab, so two tabs can be two people. `?as=3` picks user 3 |
+| `GET /api/me` gives `roles: []` | `GET /me` gives `role` | Turned into `roles: [role]` |
+| `GET /api/listings` gives `Listing[]` | `GET /listings/search` gives `{ total, results }` | Reads `results` |
+| `sort=match\|price\|delivery` | `best_match\|price_asc\|price_desc` | Mapped. Delivery sort is done in the browser |
+| `categories[]`, `tags[]`, string ids | one `category`, no tags, number ids | Mapped to the front end's shape |
+| Errors `{ error: { code, message } }` | `{ error: "text" }` | Both are accepted. The code comes from the status (401, 403, 404, 409, 400) |
+
+**Not on the back end yet** (the screens show "This part of the server is not available yet."): negotiations, chat messages, outcome and rematch, buyer requests, seller listings with a `priceFloor`, the seller's active negotiation, payment. The front end already calls these at the paths in this document, so they start working as the back end adds them.
+
+The back end must also: send `Access-Control-Allow-Credentials` rules that fit production, store `priceFloor` for each listing (the form already collects it), and never return it to buyers.
