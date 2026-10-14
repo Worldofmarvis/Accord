@@ -13,6 +13,8 @@ export type Listing = {
   deliveryDays: number
   /** True while another buyer has an active negotiation with this seller. */
   locked: boolean
+  /** True when the signed-in person owns it. A person can't negotiate with themselves. */
+  mine: boolean
 }
 
 export type Role = 'buyer' | 'seller'
@@ -35,20 +37,54 @@ export type NegotiationStatus = 'active' | 'agreed' | 'no_agreement'
 export type Negotiation = {
   id: string
   status: NegotiationStatus
+  /** Which side the person looking at it is. */
+  viewerRole: Role
   service: string
-  sellerName: string
-  /** Sent in the seller's view only. */
-  buyerName?: string
+  /** The seller's name for a buyer, the buyer's name for a seller. */
+  counterpartName: string
   listPrice: number
   round: number
   maxRounds: number
-  /** Only the buyer's own limits, and only in the buyer's view. The seller's view has none (docs/API.md). */
+  /** The viewer's own limits only, never the other side's. A buyer gets `buyerLimits`, a seller gets `sellerLimits`. */
   buyerLimits?: { target: number; max: number }
+  sellerLimits?: { floor: number }
   /** Set when `status` is "agreed", otherwise null. */
   agreedPrice: number | null
   offers: Offer[]
   /** Whose counter-offer is awaited right now. */
   waitingOn: Role | null
+}
+
+/** One side's answer to the agreed price. Final once it is "approved" or "declined". */
+export type Decision = 'pending' | 'approved' | 'declined'
+
+/** The deal as a whole: "approved" only when both sides approved, "declined" as soon as either side declines. */
+export type ApprovalStatus = 'pending' | 'approved' | 'declined'
+
+/**
+ * Both humans' decisions on an agreed price. Shared state: the buyer and the seller see the same
+ * object, and payment stays locked until `status` is "approved". Not private (unlike limits).
+ */
+export type DealApproval = {
+  negotiationId: string
+  agreedPrice: number
+  buyer: Decision
+  seller: Decision
+  status: ApprovalStatus
+}
+
+/** Whether the buyer has paid the agreed price. Set by the server after PayPal confirms the capture. */
+export type PaymentStatus = 'unpaid' | 'paid'
+
+/** The payment for an agreed deal. `orderId`, `captureId` and `paidAt` are null until it is paid. */
+export type Payment = {
+  negotiationId: string
+  status: PaymentStatus
+  /** Whole US dollars, always the deal's `agreedPrice` (the server sets it, the front end never sends it). */
+  amount: number
+  orderId: string | null
+  captureId: string | null
+  paidAt: string | null
 }
 
 export type RematchSuggestion = {

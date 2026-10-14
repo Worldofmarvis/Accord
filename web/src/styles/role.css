@@ -50,21 +50,17 @@
   .role-switch button { min-height: 44px; }
 }
 
-/* "Switch user" in the header (real mode) and the demo sign-in card. */
-.role-link {
-  min-height: 32px;
-  padding: 0 var(--space-3);
-  border: 0;
+/* The number on the Proposals link: proposals waiting for this side's answer. */
+.nav-count {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin-left: var(--space-2);
+  padding: 0 6px;
   border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-primary-contrast);
-  font: inherit;
-  font-size: var(--text-sm);
-  text-decoration: underline;
-  cursor: pointer;
+  background: var(--color-primary-contrast);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.25rem;
+  text-align: center;
 }
-
-.demo-login { max-width: 480px; margin: var(--space-6) auto; display: flex; flex-direction: column; gap: var(--space-3); }
-.demo-login h1 { margin: 0; }
-.demo-login ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.demo-login button { width: 100%; justify-content: space-between; }

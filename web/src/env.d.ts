@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_USE_MOCK?: string
   /** Where the API lives. Defaults to "/api". */
   readonly VITE_API_URL?: string
+  /** PayPal sandbox client ID for the checkout buttons. Needed when VITE_USE_MOCK is "false". */
+  readonly VITE_PAYPAL_CLIENT_ID?: string
   /** Polling interval in milliseconds. Defaults to 3000. */
   readonly VITE_POLL_MS?: string
 }

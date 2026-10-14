@@ -5,6 +5,7 @@ import SellerDashboard from './pages/SellerDashboard'
 import Search from './pages/Search'
 import Negotiation from './pages/Negotiation'
 import Payment from './pages/Payment'
+import Proposals from './pages/Proposals'
 import NoAgreement from './pages/NoAgreement'
 import NotFound from './pages/NotFound'
 import RequireRole from './role/RequireRole'
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="search" element={<Search />} />
             <Route path="buyer" element={<RequireRole role="buyer"><BuyerDashboard /></RequireRole>} />
             <Route path="seller" element={<RequireRole role="seller"><SellerDashboard /></RequireRole>} />
+            <Route path="proposals" element={<Proposals />} />
             <Route path="negotiations/:id" element={<Negotiation />} />
             <Route path="negotiations/:id/pay" element={<Payment />} />
             <Route path="negotiations/:id/no-agreement" element={<NoAgreement />} />

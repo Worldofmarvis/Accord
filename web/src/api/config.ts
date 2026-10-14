@@ -3,6 +3,9 @@
 /** Use the built-in demo data instead of the real API. Default: true, until the back end is ready. */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 
+/** PayPal sandbox client ID (public, safe in the browser). Never put the PayPal secret here. */
+export const PAYPAL_CLIENT_ID = (import.meta.env.VITE_PAYPAL_CLIENT_ID ?? '').trim()
+
 /** Where the API lives, without a trailing slash. */
 export const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
 

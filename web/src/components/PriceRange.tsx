@@ -1,10 +1,17 @@
 import { usd } from '../lib/format'
-import type { Offer } from '../types/marketplace'
+import type { Offer, Role } from '../types/marketplace'
 
-type Props = { offers: Offer[]; buyerMax: number }
+type Props = {
+  offers: Offer[]
+  viewerRole: Role
+  /** The viewer's own limit: a buyer's maximum or a seller's floor. */
+  limit: number
+}
 
-// Plots every accepted offer on one line, plus the buyer's own max.
-export default function PriceRange({ offers, buyerMax }: Props) {
+// Plots every accepted offer on one line, plus the viewer's own limit.
+export default function PriceRange({ offers, viewerRole, limit }: Props) {
+  const limitName = viewerRole === 'buyer' ? 'max' : 'floor'
+  const buyerMax = limit
   const amounts = offers.map((o) => o.amount)
   const lo = Math.floor(Math.min(...amounts, buyerMax) / 50) * 50
   const hi = Math.max(...amounts, buyerMax) + 20
@@ -21,7 +28,7 @@ export default function PriceRange({ offers, buyerMax }: Props) {
 
         <div className="price-range-max" style={{ left: pos(buyerMax) }} />
         <div className="price-range-label price-range-label-max" style={{ left: pos(buyerMax) }}>
-          Your max {usd(buyerMax)}
+          Your {limitName} {usd(buyerMax)}
         </div>
 
         {offers.map((o) => {
@@ -48,13 +55,13 @@ export default function PriceRange({ offers, buyerMax }: Props) {
       </div>
       <div className="price-range-legend muted caption">
         <span>
-          <span className="marker marker-buyer" /> Your agent
+          <span className="marker marker-buyer" /> {viewerRole === 'buyer' ? 'Your agent' : 'Buyer agent'}
         </span>
         <span>
-          <span className="marker marker-seller" /> Seller agent
+          <span className="marker marker-seller" /> {viewerRole === 'seller' ? 'Your agent' : 'Seller agent'}
         </span>
         <span>
-          <span className="legend-dash" /> Your max (only you can see this)
+          <span className="legend-dash" /> Your {limitName} (only you can see this)
         </span>
       </div>
     </section>

@@ -1,15 +1,16 @@
 import Badge from './Badge'
 import { usd } from '../lib/format'
-import type { Negotiation, Role } from '../types/marketplace'
+import type { Negotiation } from '../types/marketplace'
 
-type Props = { negotiation: Negotiation; /** Who is looking. Defaults to the buyer. */ viewer?: Role }
+type Props = { negotiation: Negotiation }
 
 // Every offer is shown with the engine's verdict (rule 1: the engine enforces limits).
-export default function NegotiationLog({ negotiation, viewer = 'buyer' }: Props) {
-  const { offers, round, waitingOn } = negotiation
+export default function NegotiationLog({ negotiation }: Props) {
+  const { offers, round, waitingOn, viewerRole } = negotiation
+  const agentName = (role: 'buyer' | 'seller') =>
+    role === viewerRole ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent'
   const sorted = [...offers].sort((a, b) => a.round - b.round || (a.role === 'buyer' ? -1 : 1))
   const tone = (r: number) => (r === round ? 'info' : 'neutral')
-  const agentName = (role: Role) => (role === viewer ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent')
 
   return (
     <section aria-label="Negotiation log" className="card">
@@ -46,7 +47,7 @@ export default function NegotiationLog({ negotiation, viewer = 'buyer' }: Props)
           </div>
           <div className="log-body">
             <div className="callout callout-pending">
-              Waiting for {waitingOn === viewer ? "your agent's" : waitingOn === 'seller' ? "the seller agent's" : "the buyer agent's"} counter-offer...
+              Waiting for {waitingOn === viewerRole ? "your agent's" : `the ${waitingOn} agent's`} counter-offer...
             </div>
           </div>
         </div>

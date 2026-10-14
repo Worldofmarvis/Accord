@@ -5,6 +5,7 @@ import type {
   BuyerRequest,
   SellerActiveNegotiation,
   SellerListing,
+  SellerNegotiationRow,
 } from '../types/dashboard'
 
 export const initialBuyerRequests: BuyerRequest[] = [
@@ -16,6 +17,7 @@ export const initialBuyerRequests: BuyerRequest[] = [
     deadline: '2026-10-30',
     target: 350,
     max: 400,
+    locked: false,
   },
 ]
 
@@ -65,8 +67,50 @@ export const initialSellerListings: SellerListing[] = [
 
 // The seller has one active negotiation (rule 3), so every listing is locked for other buyers.
 export const sellerActiveNegotiation: SellerActiveNegotiation | null = {
-  negotiationId: 'n1',
+  negotiationId: 'demo-seller',
   listingId: 'l1',
   round: 2,
   maxRounds: 3,
 }
+
+// The seller's history: the live one, a settled one waiting for approvals, and one that ended.
+// The ids match the demo negotiations in ./mock.ts. The `deal` of the settled one is filled in
+// from the shared approval state by src/api/mock.ts.
+export const sellerNegotiations: SellerNegotiationRow[] = [
+  {
+    id: 'demo-seller',
+    service: '5-page business website',
+    buyerName: 'Jordan Lee',
+    status: 'active',
+    round: 2,
+    maxRounds: 3,
+    buyerOffer: 360,
+    sellerOffer: 500,
+    agreedPrice: null,
+    deal: null,
+  },
+  {
+    id: 'agreed',
+    service: '5-page business website',
+    buyerName: 'Ben Carter',
+    status: 'agreed',
+    round: 3,
+    maxRounds: 3,
+    buyerOffer: 380,
+    sellerOffer: 380,
+    agreedPrice: 380,
+    deal: 'pending',
+  },
+  {
+    id: 'n3',
+    service: 'Simple blog setup',
+    buyerName: 'Sofia Alvarez',
+    status: 'no_agreement',
+    round: 3,
+    maxRounds: 3,
+    buyerOffer: 95,
+    sellerOffer: 140,
+    agreedPrice: null,
+    deal: null,
+  },
+]

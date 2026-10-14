@@ -13,7 +13,7 @@ const matchLabels = ['Best match', '2nd match', '3rd match']
 export default function NoAgreement() {
   const { id = '' } = useParams()
   const outcome = useAsync(() => api.getOutcome(id), [id])
-  const starter = useStartNegotiation()
+  const starter = useStartNegotiation('buyer')
 
   if (outcome.error != null) {
     return (
@@ -136,7 +136,7 @@ export default function NoAgreement() {
             </h2>
             <p className="muted small">
               {s.rematches.length > 0
-                ? 'Ranked by how well they match your request. Start one with a single click.'
+                ? 'Ranked by how well they match your request. Send a proposal with one click. The seller accepts before it starts.'
                 : 'Try a new search, or change your request.'}
             </p>
           </div>
@@ -164,10 +164,10 @@ export default function NoAgreement() {
               <button
                 type="button"
                 className={`btn btn-lg ${i === 0 ? 'btn-primary' : 'btn-secondary'}`}
-                disabled={starter.busyListingId === m.listingId}
-                onClick={() => void starter.start({ id: m.listingId, sellerName: m.sellerName })}
+                disabled={starter.busyId === m.listingId}
+                onClick={() => void starter.start({ id: m.listingId, name: m.sellerName })}
               >
-                {starter.busyListingId === m.listingId ? 'Starting...' : 'Start negotiation'}
+                {starter.busyId === m.listingId ? 'Sending...' : 'Negotiate'}
               </button>
             </article>
           ))}

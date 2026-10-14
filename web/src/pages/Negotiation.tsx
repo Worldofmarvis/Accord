@@ -9,46 +9,91 @@ import OfferCard from '../components/OfferCard'
 import PriceRange from '../components/PriceRange'
 import RoundProgress from '../components/RoundProgress'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
+import { useApproval } from '../hooks/useApproval'
 import { useNegotiation } from '../hooks/useNegotiation'
 import { usd } from '../lib/format'
-import { useRole } from '../role/useRole'
 import type { Role } from '../types/marketplace'
 
 export default function Negotiation() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const { role } = useRole()
-  const isBuyer = role === 'buyer'
   const { negotiation: n, error, loading, retry } = useNegotiation(id)
 
-  // When the negotiation ends, move the buyer on to the matching screen.
-  // The seller stays here: the pay and rematch screens are the buyer's.
+  // When the negotiation ends, move a buyer on to the matching screen. A seller stays here and sees the result.
   const status = n?.status
+  const viewerRole = n?.viewerRole
   useEffect(() => {
-    if (!isBuyer) return
+    if (viewerRole !== 'buyer') return
     const path = `/negotiations/${encodeURIComponent(id)}`
     if (status === 'agreed') navigate(`${path}/pay`, { replace: true })
     if (status === 'no_agreement') navigate(`${path}/no-agreement`, { replace: true })
-  }, [status, id, isBuyer, navigate])
+  }, [status, viewerRole, id, navigate])
+
+  // A seller stays here after "agreed", so keep following the deal until it is approved or declined.
+  const deal = useApproval(id, n?.status === 'agreed' && n.viewerRole === 'seller')
 
   if (!n) {
     return (
       <div className="page-stack">
-        {loading ? <LoadingCard label="Loading the negotiation..." /> : <ErrorCard error={error} onRetry={retry} />}
+        {loading ? <LoadingCard label="Loading your negotiation..." /> : <ErrorCard error={error} onRetry={retry} />}
       </div>
     )
   }
 
-  if (isBuyer && n.status !== 'active') {
+  if (n.status !== 'active') {
+    if (n.viewerRole === 'buyer') {
+      return (
+        <div className="page-stack">
+          <LoadingCard label="This negotiation has ended. Taking you to the result..." />
+        </div>
+      )
+    }
     return (
       <div className="page-stack">
-        <LoadingCard label="This negotiation has ended. Taking you to the result..." />
+        <section aria-label="Result" className="card">
+          {n.status === 'agreed' ? (
+            <>
+              <h1>You reached an agreement</h1>
+              <p>
+                {n.service} with {n.counterpartName}
+                {n.agreedPrice != null && <> at {usd(n.agreedPrice)}</>}. You and the buyer both approve the agreed
+                price first, then the buyer pays. Nothing is charged until you both approve.
+              </p>
+              {deal.approval && (
+                <div className="notice notice-warning" role="status">
+                  {deal.approval.status === 'declined'
+                    ? 'This deal was declined. Nothing was charged.'
+                    : deal.approval.status === 'approved'
+                      ? 'Both of you approved. The buyer can pay now.'
+                      : deal.approval.seller === 'approved'
+                        ? 'You approved. Waiting for the buyer to approve.'
+                        : 'Waiting for your approval.'}
+                </div>
+              )}
+              <Link to={`/negotiations/${encodeURIComponent(id)}/pay`} className="btn btn-primary btn-lg">
+                {deal.approval?.seller === 'pending' || !deal.approval ? 'Review and approve' : 'View the deal'}
+              </Link>
+            </>
+          ) : (
+            <>
+              <h1>No agreement</h1>
+              <p>
+                The negotiation with {n.counterpartName} ended after {n.maxRounds} rounds. Nothing was charged, and
+                your listing is open to new proposals again.
+              </p>
+            </>
+          )}
+          <Link to="/seller" className="btn btn-secondary btn-lg">
+            Back to my listings
+          </Link>
+        </section>
       </div>
     )
   }
 
-  const latest = (r: Role) => [...n.offers].reverse().find((o) => o.role === r)
-  const counterpartName = isBuyer ? n.sellerName : (n.buyerName ?? 'the buyer')
+  const viewer = n.viewerRole
+  const latest = (role: Role) => [...n.offers].reverse().find((o) => o.role === role)
+  const limit = viewer === 'buyer' ? n.buyerLimits?.max : n.sellerLimits?.floor
 
   return (
     <div className="page-stack page-wide">
@@ -56,19 +101,15 @@ export default function Negotiation() {
         <div>
           <h1>{n.service}</h1>
           <p className="muted">
-            Negotiating with {counterpartName}. List price {usd(n.listPrice)}.
+            Negotiating with {n.counterpartName}. {viewer === 'seller' ? 'Your list price' : 'List price'}{' '}
+            {usd(n.listPrice)}.
           </p>
         </div>
         <div className="neg-status">
-          {n.status === 'active' && <Badge tone="info">Negotiation active</Badge>}
-          {n.status === 'agreed' && <Badge tone="success">Agreement reached{n.agreedPrice != null && ` at ${usd(n.agreedPrice)}`}</Badge>}
-          {n.status === 'no_agreement' && <Badge tone="warning">No agreement</Badge>}
-          {n.status === 'active' && (
-            <span className="muted caption">
-              {isBuyer ? 'This seller is locked for other buyers' : 'Your listing is locked for other buyers'}
-            </span>
-          )}
-          {!isBuyer && n.status !== 'active' && <Link to="/seller">Back to your dashboard</Link>}
+          <Badge tone="info">Negotiation active</Badge>
+          <span className="muted caption">
+            {viewer === 'buyer' ? 'This seller is locked for other buyers' : 'Your listing is locked for other buyers'}
+          </span>
         </div>
       </div>
 
@@ -84,19 +125,23 @@ export default function Negotiation() {
 
       <div className="neg-layout">
         <div className="neg-main">
-          {/* The agents' cards and the price chart use the buyer's limits, so only the buyer's view has them. */}
-          {isBuyer && n.buyerLimits && (
-            <>
-              <div className="neg-agents">
-                <OfferCard role="buyer" currentRound={n.round} offer={latest('buyer')} limits={n.buyerLimits} />
-                <OfferCard role="seller" currentRound={n.round} offer={latest('seller')} />
-              </div>
-              <PriceRange offers={n.offers} buyerMax={n.buyerLimits.max} />
-            </>
-          )}
-          <NegotiationLog negotiation={n} viewer={role} />
+          <div className="neg-agents">
+            {(['buyer', 'seller'] as const).map((role) => (
+              <OfferCard
+                key={role}
+                role={role}
+                viewerRole={viewer}
+                currentRound={n.round}
+                offer={latest(role)}
+                buyerLimits={n.buyerLimits}
+                sellerLimits={n.sellerLimits}
+              />
+            ))}
+          </div>
+          {limit != null && <PriceRange offers={n.offers} viewerRole={viewer} limit={limit} />}
+          <NegotiationLog negotiation={n} />
         </div>
-        <ChatPanel negotiationId={n.id} role={role} counterpartName={counterpartName} />
+        <ChatPanel negotiationId={n.id} counterpartName={n.counterpartName} viewerRole={viewer} />
       </div>
     </div>
   )

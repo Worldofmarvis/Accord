@@ -6,14 +6,12 @@ import type { Listing } from '../types/marketplace'
 type Props = {
   listing: Listing
   onNegotiate: (listing: Listing) => void
-  /** True while the negotiation is being created. */
+  /** True while the proposal is being sent. */
   busy?: boolean
-  /** False when the person is viewing as a seller: they can browse but not negotiate. */
-  canNegotiate?: boolean
 }
 
 // One search result. A locked seller already has an active negotiation (rule 3).
-export default function ServiceCard({ listing, onNegotiate, busy = false, canNegotiate = true }: Props) {
+export default function ServiceCard({ listing, onNegotiate, busy = false }: Props) {
   return (
     <article className="card service-card">
       <div className="service-card-body">
@@ -23,6 +21,7 @@ export default function ServiceCard({ listing, onNegotiate, busy = false, canNeg
               {c}
             </Badge>
           ))}
+          {listing.mine && <Badge tone="primary">Your listing</Badge>}
           {listing.locked && (
             <Badge tone="warning">
               <LockIcon size={12} />
@@ -40,17 +39,17 @@ export default function ServiceCard({ listing, onNegotiate, busy = false, canNeg
           <div className="service-card-amount">{usd(listing.listPrice)}</div>
           <div className="muted small">Delivery in {listing.deliveryDays} days</div>
         </div>
-        {listing.locked ? (
+        {listing.mine ? (
+          <button type="button" className="btn btn-lg" disabled>
+            You can't negotiate with yourself
+          </button>
+        ) : listing.locked ? (
           <button type="button" className="btn btn-lg" disabled>
             In negotiation with another buyer
           </button>
-        ) : !canNegotiate ? (
-          <button type="button" className="btn btn-lg" disabled>
-            Buyers only
-          </button>
         ) : (
           <button type="button" className="btn btn-primary btn-lg" disabled={busy} onClick={() => onNegotiate(listing)}>
-            {busy ? 'Starting...' : 'Negotiate'}
+            {busy ? 'Sending...' : 'Negotiate'}
           </button>
         )}
       </div>

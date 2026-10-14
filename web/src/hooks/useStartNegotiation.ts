@@ -1,70 +1,94 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api, ApiError, errorMessage } from '../api'
+import type { Role } from '../types/me'
 import { useAsync } from './useAsync'
+import { refreshIncomingProposals } from './useIncomingProposals'
 
 export type StartProblem =
   | { kind: 'no-request' }
-  | { kind: 'locked'; sellerName: string }
+  | { kind: 'no-listing' }
+  | { kind: 'locked'; name: string; role: Role }
+  | { kind: 'request-locked'; name: string; role: Role }
+  | { kind: 'sent'; name: string }
   | { kind: 'error'; message: string }
 
+type Option = { id: string; title: string }
+
 /**
- * Starting a negotiation, shared by the Search and rematch screens.
+ * "Negotiate": sending a proposal, shared by both search screens and the rematch screen.
  *
- * The buyer's target and max come from one of their saved requests (docs/API.md), so this
- * loads the buyer's requests and uses the one picked, or the first. On success it opens the
- * new negotiation. If the seller got locked in the meantime, the server answers
- * SELLER_LOCKED and `problem` says so; `onLocked` lets the screen refresh its list.
- * With `enabled` false (the person is viewing as a seller) nothing is loaded.
+ * A negotiation only starts after the other side accepts (docs/API.md, "Proposals"), so this
+ * sends a proposal and reports `sent`. The person's own side comes from one of their saved items:
+ *  - a buyer picks one of their requests (the proposal uses its target and max, privately),
+ *  - a seller picks one of their listings that is not already in a negotiation.
+ * If the seller got locked in the meantime, the server answers SELLER_LOCKED (or REQUEST_LOCKED for a
+ * request that is already in a negotiation) and `problem` says so; `onLocked` lets the screen refresh its list.
+ * A request that is already in a negotiation is not offered in the picker, and the server refuses a
+ * proposal between a person's own listing and own request.
  */
-export function useStartNegotiation(onLocked?: () => void, enabled = true) {
-  const navigate = useNavigate()
-  // Only buyers have requests, so a seller viewing the page never asks for them.
-  const requests = useAsync(() => (enabled ? api.listBuyerRequests() : Promise.resolve([])), [enabled])
+export function useStartNegotiation(role: Role, onLocked?: () => void) {
+  const options = useAsync<{ list: Option[]; blocked: number }>(async () => {
+    if (role === 'buyer') {
+      const requests = await api.listBuyerRequests()
+      const free = requests.filter((r) => !r.locked)
+      return { list: free.map((r) => ({ id: r.id, title: r.title })), blocked: requests.length - free.length }
+    }
+    const [listings, active] = await Promise.all([api.listSellerListings(), api.getSellerActiveNegotiation()])
+    const free = listings.filter((l) => l.id !== active?.listingId)
+    return { list: free.map((l) => ({ id: l.id, title: l.title })), blocked: listings.length - free.length }
+  }, [role])
   const [pickedId, setPickedId] = useState<string>()
-  const [busyListingId, setBusyListingId] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [problem, setProblem] = useState<StartProblem | null>(null)
 
-  const list = requests.data ?? []
-  const selected = list.find((r) => r.id === pickedId) ?? list[0]
+  const list = options.data?.list ?? []
+  const selected = list.find((o) => o.id === pickedId) ?? list[0]
 
-  async function start(listing: { id: string; sellerName: string }) {
+  /** `counterpart` is the listing (for a buyer) or the request (for a seller) the proposal is about. */
+  async function start(counterpart: { id: string; name: string }) {
     setProblem(null)
-    if (requests.error) {
-      setProblem({ kind: 'error', message: errorMessage(requests.error) })
+    if (options.error) {
+      setProblem({ kind: 'error', message: errorMessage(options.error) })
       return
     }
-    if (requests.loading && !requests.data) {
-      setProblem({ kind: 'error', message: 'Your requests are still loading. Try again in a moment.' })
+    if (options.loading && !options.data) {
+      setProblem({ kind: 'error', message: 'Your details are still loading. Try again in a moment.' })
       return
     }
     if (!selected) {
-      setProblem({ kind: 'no-request' })
+      // Everything the buyer has is already in a negotiation: say so, rather than asking for a new request.
+      if (role === 'buyer' && (options.data?.blocked ?? 0) > 0) {
+        setProblem({ kind: 'request-locked', name: '', role })
+      } else {
+        setProblem({ kind: role === 'buyer' ? 'no-request' : 'no-listing' })
+      }
       return
     }
 
-    setBusyListingId(listing.id)
+    setBusyId(counterpart.id)
     try {
-      const { id } = await api.startNegotiation({ listingId: listing.id, requestId: selected.id })
-      navigate(`/negotiations/${encodeURIComponent(id)}`)
+      await api.sendProposal(
+        role === 'buyer'
+          ? { role, listingId: counterpart.id, requestId: selected.id }
+          : { role, listingId: selected.id, requestId: counterpart.id },
+      )
+      setProblem({ kind: 'sent', name: counterpart.name })
+      refreshIncomingProposals()
     } catch (e) {
       if (e instanceof ApiError && e.code === 'SELLER_LOCKED') {
-        setProblem({ kind: 'locked', sellerName: listing.sellerName })
+        setProblem({ kind: 'locked', name: counterpart.name, role })
+        onLocked?.()
+      } else if (e instanceof ApiError && e.code === 'REQUEST_LOCKED') {
+        setProblem({ kind: 'request-locked', name: counterpart.name, role })
+        options.reload()
         onLocked?.()
       } else {
         setProblem({ kind: 'error', message: errorMessage(e) })
       }
     } finally {
-      setBusyListingId(null)
+      setBusyId(null)
     }
   }
 
-  return {
-    requests: list,
-    selected,
-    pick: setPickedId,
-    start,
-    busyListingId,
-    problem,
-  }
+  return { options: list, selected, pick: setPickedId, start, busyId, problem }
 }

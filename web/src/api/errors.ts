@@ -4,6 +4,7 @@ export type ApiErrorCode =
   | 'NOT_FOUND'
   | 'FORBIDDEN'
   | 'SELLER_LOCKED'
+  | 'REQUEST_LOCKED'
   | 'ROUND_LIMIT'
   | 'UNAUTHENTICATED'
   | 'NETWORK' // the request never reached the server

@@ -6,7 +6,7 @@ import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
 import { useAsync } from '../hooks/useAsync'
 import { categories } from '../lib/categories'
-import { parsePrice, todayISO } from '../lib/forms'
+import { PRICE_ERROR, parsePrice, todayISO } from '../lib/forms'
 import { usd } from '../lib/format'
 import '../styles/dashboards.css'
 
@@ -23,8 +23,8 @@ function validate(f: Form): Errors {
   else if (f.deadline < todayISO()) e.deadline = 'The deadline cannot be in the past.'
   const target = parsePrice(f.target)
   const max = parsePrice(f.max)
-  if (target === null) e.target = 'Enter a price above 0.'
-  if (max === null) e.max = 'Enter a price above 0.'
+  if (target === null) e.target = PRICE_ERROR
+  if (max === null) e.max = PRICE_ERROR
   if (target !== null && max !== null && max < target) e.max = 'Your maximum must be at least your target.'
   return e
 }
