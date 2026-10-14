@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --env-file=.env --watch server.js"
+    "dev": "node --env-file=.env --watch server.js",
+    "smoke": "node smoke.js"
   },
   "keywords": [],
   "author": "",
