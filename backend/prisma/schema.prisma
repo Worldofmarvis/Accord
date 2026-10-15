@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Supabase: direct connection, used by migrations
 }
 
 generator client {
@@ -44,10 +45,11 @@ model User {
   role      Role     @default(BUYER)
   roles     Role[]   @default([BUYER, SELLER])
 
-  listings  Listing[]
-  requests  BuyerRequest[]
-  messages  Message[]
-  createdAt DateTime @default(now())
+  listings     Listing[]
+  requests     BuyerRequest[]
+  messages     Message[]
+  negotiations Negotiation[]   // NEW: negotiations where this user is the buyer
+  createdAt    DateTime @default(now())
 }
 
 model BuyerRequest {
@@ -58,8 +60,8 @@ model BuyerRequest {
   category     String
   deliverables String
   deadline     String
-  targetPrice  Float
-  maxPrice     Float
+  targetPrice  Int      // CHANGED: Float -> Int (whole US dollars)
+  maxPrice     Int      // CHANGED: Float -> Int
   createdAt    DateTime @default(now())
 
   proposals    Proposal[]
@@ -72,8 +74,10 @@ model Listing {
   title        String
   description  String?
   category     String
-  listPrice    Float
-  floorPrice   Float    // Private: Never leak to buyer front-end
+  deliverables String   @default("")   // NEW
+  tags         String[] @default([])   // NEW: extra search words
+  listPrice    Int                     // CHANGED: Float -> Int
+  floorPrice   Int                     // CHANGED: Float -> Int. Private: Never leak to buyer front-end
   deliveryDays Int      @default(7)
   createdAt    DateTime @default(now())
 
@@ -94,15 +98,18 @@ model Proposal {
 }
 
 model Negotiation {
-  id            String            @id @default(uuid())
-  listingId     String
-  buyerId       String
-  currentRound  Int               @default(1)
-  status        NegotiationStatus @default(OPEN)
-  buyerMaxPrice Float?
-  finalPrice    Float?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id               String            @id @default(uuid())
+  listingId        String
+  buyerId          String
+  buyer            User              @relation(fields: [buyerId], references: [id]) // NEW relation
+  currentRound     Int               @default(1)
+  maxRounds        Int               @default(3)   // NEW
+  status           NegotiationStatus @default(OPEN)
+  buyerTargetPrice Int?                            // NEW: private to the buyer
+  buyerMaxPrice    Int?                            // CHANGED: Float -> Int. Private to the buyer
+  finalPrice       Int?                            // CHANGED: Float -> Int
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   listing     Listing      @relation(fields: [listingId], references: [id])
   proposal    Proposal?
@@ -118,8 +125,10 @@ model Offer {
   negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
   roundNumber   Int
   offeredBy     OfferBy
-  proposedPrice Float
+  proposedPrice Int         // CHANGED: Float -> Int
   reasoning     String?
+  blockedPrice  Int?        // NEW: what the agent proposed, if the engine replaced it
+  blockedReason String?     // NEW: why the engine replaced it
   createdAt     DateTime    @default(now())
 }
 
@@ -127,9 +136,10 @@ model Message {
   id            String      @id @default(uuid())
   negotiationId String
   negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
-  senderId      String
-  sender        User        @relation(fields: [senderId], references: [id])
+  senderId      String?     // CHANGED: optional, system messages have no sender
+  sender        User?       @relation(fields: [senderId], references: [id])
   content       String
+  tone          String?     // NEW: "note" or "warning" for system messages
   createdAt     DateTime    @default(now())
 }
 
@@ -138,7 +148,7 @@ model Payment {
   negotiationId String
   negotiation   Negotiation   @relation(fields: [negotiationId], references: [id])
   paypalOrderId String        @unique
-  amount        Float
+  amount        Int           // CHANGED: Float -> Int
   status        PaymentStatus @default(PENDING)
   createdAt     DateTime      @default(now())
 }
