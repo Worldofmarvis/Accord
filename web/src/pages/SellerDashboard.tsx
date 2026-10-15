@@ -129,9 +129,14 @@ export default function SellerDashboard() {
 
   return (
     <div className="page-stack">
-      <div>
-        <h1>Seller dashboard</h1>
-        <p className="muted">Manage your listings. Your agent will not accept a price below your floor.</p>
+      <div className="page-head">
+        <div>
+          <h1>Seller dashboard</h1>
+          <p className="muted">Manage your listings. Your agent will not accept a price below your floor.</p>
+        </div>
+        <Link to="/seller/history" className="btn btn-secondary btn-lg">
+          View sales history
+        </Link>
       </div>
 
       {active && (

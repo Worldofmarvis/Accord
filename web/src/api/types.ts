@@ -6,6 +6,7 @@ import type {
   SellerActiveNegotiation,
   SellerNegotiationRow,
   SellerListing,
+  SellerSale,
 } from '../types/dashboard'
 import type { Me, Role } from '../types/me'
 import type { OpenRequest, Proposal, RequestQuery } from '../types/proposal'
@@ -78,4 +79,6 @@ export interface Api {
   getSellerActiveNegotiation(): Promise<SellerActiveNegotiation | null>
   /** Every negotiation the seller has had, active or finished, so they can find it again. */
   listSellerNegotiations(): Promise<SellerNegotiationRow[]>
+  /** The seller's sales history: every settled or ended negotiation (not the active one), newest first. */
+  listSellerSales(): Promise<SellerSale[]>
 }

@@ -44,6 +44,31 @@ export type SellerNegotiationRow = {
   deal: ApprovalStatus | null
 }
 
+/**
+ * Where a deal ended up, for the seller's sales history:
+ * "paid" is a sale. "awaiting_approval" and "awaiting_payment" are agreed but not finished.
+ * "declined" is a deal that a person refused after the agents agreed. "no_agreement" ended without a price.
+ */
+export type SaleOutcome = 'paid' | 'awaiting_approval' | 'awaiting_payment' | 'declined' | 'no_agreement'
+
+/** One finished or settled negotiation of the seller, as a row of the sales history. Active ones are not included. */
+export type SellerSale = {
+  /** The negotiation id. */
+  id: string
+  /** ISO 8601. When it was paid; otherwise when it was agreed, declined or ended. */
+  date: string
+  service: string
+  buyerName: string
+  listPrice: number
+  /** The seller's own price floor for that listing. Private to the seller, so it is fine here. Never the buyer's limits. */
+  priceFloor: number
+  /** The price the agents settled on. Null when the outcome is "no_agreement". */
+  agreedPrice: number | null
+  /** How many rounds it took (1 to 3). */
+  rounds: number
+  outcome: SaleOutcome
+}
+
 export type SellerListing = {
   id: string
   title: string

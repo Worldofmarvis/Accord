@@ -1,5 +1,4 @@
-import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom'
-import { USE_MOCK } from '../api'
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { useIncomingProposals } from '../hooks/useIncomingProposals'
 import { useRole } from '../role/useRole'
 import type { Role } from '../types/me'
@@ -7,37 +6,41 @@ import type { Role } from '../types/me'
 const sideLabel: Record<Role, string> = { buyer: 'Buyer', seller: 'Seller' }
 
 export default function Layout() {
-  const { me, role, setRole } = useRole()
-  const navigate = useNavigate()
-  const canSwitch = me.roles.length > 1
+  const { me, role } = useRole()
+  const { pathname } = useLocation()
   const incoming = useIncomingProposals(role)
 
-  // The menu only shows the dashboard for the side the person is viewing.
-  const links: { to: string; label: string; count?: number }[] = [
-    { to: '/search', label: 'Search' },
+  // Each side has its own menu: a buyer finds services, a seller finds customers.
+  // The side was chosen on the first screen and stays the same for this tab.
+  const links: { to: string; label: string; count?: number }[] =
     role === 'buyer'
-      ? { to: '/buyer', label: 'Buyer dashboard' }
-      : { to: '/seller', label: 'Seller dashboard' },
-    { to: '/proposals', label: 'Proposals', count: incoming },
-  ]
-
-  function switchTo(next: Role) {
-    if (next === role) return
-    setRole(next)
-    navigate(next === 'buyer' ? '/buyer' : '/seller')
-  }
+      ? [
+          { to: '/search', label: 'Find services' },
+          { to: '/buyer', label: 'Buyer dashboard' },
+          { to: '/proposals', label: 'Proposals', count: incoming },
+        ]
+      : [
+          { to: '/search', label: 'Find customers' },
+          { to: '/seller', label: 'Seller dashboard' },
+          { to: '/seller/history', label: 'Sales history' },
+          { to: '/proposals', label: 'Proposals', count: incoming },
+        ]
 
   return (
     <div className="shell">
       <header className="shell-header">
-        <Link to="/" className="brand">
-          Agent Negotiation Marketplace
-        </Link>
+        <div className="brand-group">
+          <Link to="/" className="brand">
+            Agent Negotiation Marketplace
+          </Link>
+          <span className={`role-pill role-pill-${role}`}>{sideLabel[role]}</span>
+        </div>
         <nav className="shell-nav" aria-label="Main">
           {links.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
+              end
               aria-label={l.count ? `${l.label}, ${l.count} waiting for your answer` : undefined}
             >
               {l.label}
@@ -50,23 +53,14 @@ export default function Layout() {
           ))}
         </nav>
         <div className="role-area">
-          {canSwitch ? (
-            <div className="role-switch" role="group" aria-label={USE_MOCK ? 'Demo: view as' : 'Viewing as'}>
-              <span className="role-switch-label">{USE_MOCK ? 'Demo: view as' : 'Viewing as'}</span>
-              {me.roles.map((r) => (
-                <button key={r} type="button" aria-pressed={r === role} onClick={() => switchTo(r)}>
-                  {sideLabel[r]}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <span className="role-switch-label">{sideLabel[role]}</span>
-          )}
           <span className="role-name">{me.name}</span>
         </div>
       </header>
       <main className="shell-main">
-        <Outlet />
+        {/* A new key on each address replays the short fade-in, so changing screens feels smooth. */}
+        <div key={pathname} className="page-enter">
+          <Outlet />
+        </div>
       </main>
     </div>
   )

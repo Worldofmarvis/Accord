@@ -6,10 +6,11 @@ type Props = {
   viewerRole: Role
   /** The viewer's own limit: a buyer's maximum or a seller's floor. */
   limit: number
+  className?: string
 }
 
 // Plots every accepted offer on one line, plus the viewer's own limit.
-export default function PriceRange({ offers, viewerRole, limit }: Props) {
+export default function PriceRange({ offers, viewerRole, limit, className }: Props) {
   const limitName = viewerRole === 'buyer' ? 'max' : 'floor'
   const buyerMax = limit
   const amounts = offers.map((o) => o.amount)
@@ -18,7 +19,7 @@ export default function PriceRange({ offers, viewerRole, limit }: Props) {
   const pos = (v: number) => `${((v - lo) / (hi - lo)) * 100}%`
 
   return (
-    <section aria-label="Price range" className="card">
+    <section aria-label="Price range" className={`card${className ? ` ${className}` : ''}`}>
       <h2 className="card-title">Price range</h2>
       <p className="muted small">
         Offers so far, from {usd(Math.min(...amounts))} to {usd(Math.max(...amounts))}.

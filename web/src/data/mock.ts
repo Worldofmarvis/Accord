@@ -98,35 +98,59 @@ export const listings: Listing[] = [
   },
 ]
 
-export function demoNegotiation(id: string): Negotiation {
+/** What changes from one demo negotiation to the next. Everything else is derived from the list price. */
+export type DealInfo = {
+  service: string
+  counterpartName: string
+  listPrice: number
+  /** The buyer's own limits, when known (from their request). */
+  buyerLimits?: { target: number; max: number }
+  /** The seller's own price floor, when known (from their listing). */
+  floor?: number
+}
+
+export const DEFAULT_BUYER_DEAL: DealInfo = { service: '5-page business website', counterpartName: 'Maya Santos', listPrice: 500 }
+export const DEFAULT_SELLER_DEAL: DealInfo = { service: '5-page business website', counterpartName: 'Jordan Lee', listPrice: 500, floor: 320 }
+/** The buyer's ended negotiation from the dashboard (its final offers are $300 and $420). */
+export const ENDED_BUYER_DEAL: DealInfo = { service: 'WordPress site fix and redesign', counterpartName: 'Lucas Moreau', listPrice: 500 }
+
+const round5 = (v: number) => Math.round(v / 5) * 5
+
+// The same shape of negotiation for any price: the buyer opens low, the seller starts at the list price.
+const buyerLimitsOf = (d: DealInfo) => d.buyerLimits ?? { target: round5(d.listPrice * 0.7), max: round5(d.listPrice * 0.8) }
+const floorOf = (d: DealInfo) => d.floor ?? round5(d.listPrice * 0.64)
+
+function activeOffers(d: DealInfo, buyerNotes: [string, string]): Negotiation['offers'] {
+  return [
+    { round: 1, role: 'buyer', amount: round5(d.listPrice * 0.68), note: buyerNotes[0] },
+    {
+      round: 1,
+      role: 'seller',
+      amount: d.listPrice,
+      note: 'Starting at the list price. Open to adjusting the price if the scope changes.',
+      blocked: { proposed: round5(d.listPrice * 1.04), reason: `above the listed price of $${d.listPrice}` },
+    },
+    { round: 2, role: 'buyer', amount: round5(d.listPrice * 0.72), note: buyerNotes[1] },
+  ]
+}
+
+export function demoNegotiation(id: string, deal: DealInfo = DEFAULT_BUYER_DEAL): Negotiation {
   return {
     id,
     status: 'active',
     viewerRole: 'buyer',
-    service: '5-page business website',
-    counterpartName: 'Maya Santos',
-    listPrice: 500,
+    service: deal.service,
+    counterpartName: deal.counterpartName,
+    listPrice: deal.listPrice,
     round: 2,
     maxRounds: 3,
-    buyerLimits: { target: 350, max: 400 },
+    buyerLimits: buyerLimitsOf(deal),
     agreedPrice: null,
     waitingOn: 'seller',
-    offers: [
-      { round: 1, role: 'buyer', amount: 340, note: 'Opening below the target to leave room to move.' },
-      {
-        round: 1,
-        role: 'seller',
-        amount: 500,
-        note: 'Starting at the list price. Open to adjusting the price if the scope changes.',
-        blocked: { proposed: 520, reason: 'above the listed price of $500' },
-      },
-      {
-        round: 2,
-        role: 'buyer',
-        amount: 360,
-        note: 'A small step up with the same scope: 5 pages, contact form, blog.',
-      },
-    ],
+    offers: activeOffers(deal, [
+      'Opening below the target to leave room to move.',
+      'A small step up with the same scope.',
+    ]),
   }
 }
 
@@ -134,30 +158,20 @@ export function demoNegotiation(id: string): Negotiation {
  * The same negotiation as the seller sees it: their own floor, no buyer limits, and the buyer
  * agent's notes without any hint of the buyer's budget.
  */
-export function demoSellerNegotiation(id: string): Negotiation {
+export function demoSellerNegotiation(id: string, deal: DealInfo = DEFAULT_SELLER_DEAL): Negotiation {
   return {
     id,
     status: 'active',
     viewerRole: 'seller',
-    service: '5-page business website',
-    counterpartName: 'Jordan Lee',
-    listPrice: 500,
+    service: deal.service,
+    counterpartName: deal.counterpartName,
+    listPrice: deal.listPrice,
     round: 2,
     maxRounds: 3,
-    sellerLimits: { floor: 320 },
+    sellerLimits: { floor: floorOf(deal) },
     agreedPrice: null,
     waitingOn: 'seller',
-    offers: [
-      { round: 1, role: 'buyer', amount: 340, note: 'Opening offer.' },
-      {
-        round: 1,
-        role: 'seller',
-        amount: 500,
-        note: 'Starting at the list price. Open to adjusting the price if the scope changes.',
-        blocked: { proposed: 520, reason: 'above the listed price of $500' },
-      },
-      { round: 2, role: 'buyer', amount: 360, note: 'A small step up with the same scope: 5 pages, contact form, blog.' },
-    ],
+    offers: activeOffers(deal, ['Opening offer.', 'A small step up with the same scope.']),
   }
 }
 
@@ -242,26 +256,27 @@ export const openRequests: OpenRequest[] = [
 ]
 
 /** The ended negotiation, as the negotiation endpoint reports it. */
-export function demoEndedNegotiation(id: string): Negotiation {
+export function demoEndedNegotiation(id: string, deal: DealInfo = ENDED_BUYER_DEAL): Negotiation {
+  const at = (ratio: number) => round5(deal.listPrice * ratio)
   return {
     id,
     status: 'no_agreement',
     viewerRole: 'buyer',
-    service: '5-page business website',
-    counterpartName: 'Maya Santos',
-    listPrice: 500,
+    service: deal.service,
+    counterpartName: deal.counterpartName,
+    listPrice: deal.listPrice,
     round: 3,
     maxRounds: 3,
-    buyerLimits: { target: 350, max: 400 },
+    buyerLimits: buyerLimitsOf(deal),
     agreedPrice: null,
     waitingOn: null,
     offers: [
-      { round: 1, role: 'buyer', amount: 240, note: 'Opening low.' },
-      { round: 1, role: 'seller', amount: 500, note: 'Starting at the list price.' },
-      { round: 2, role: 'buyer', amount: 270, note: 'A small step up.' },
-      { round: 2, role: 'seller', amount: 460, note: 'A small concession.' },
-      { round: 3, role: 'buyer', amount: 300, note: 'Final offer.' },
-      { round: 3, role: 'seller', amount: 420, note: 'Final offer.' },
+      { round: 1, role: 'buyer', amount: at(0.48), note: 'Opening low.' },
+      { round: 1, role: 'seller', amount: at(1), note: 'Starting at the list price.' },
+      { round: 2, role: 'buyer', amount: at(0.54), note: 'A small step up.' },
+      { round: 2, role: 'seller', amount: at(0.92), note: 'A small concession.' },
+      { round: 3, role: 'buyer', amount: at(0.6), note: 'Final offer.' },
+      { round: 3, role: 'seller', amount: at(0.84), note: 'Final offer.' },
     ],
   }
 }
@@ -291,29 +306,33 @@ export function demoSellerEndedNegotiation(id: string): Negotiation {
   }
 }
 
-export const demoMessages: ChatMessage[] = [
-  { id: 'm1', from: 'seller', sentAt: minutesAgo(25), text: 'Hi! Does the 5-page site include a contact form?' },
-  { id: 'm2', from: 'buyer', sentAt: minutesAgo(23), text: 'Yes, plus a simple blog page. I need it by Oct 30.' },
-  { id: 'm3', from: 'seller', sentAt: minutesAgo(22), text: 'Great. I can fit both if the scope stays at 5 pages.' },
-  { id: 'm4', from: 'system', tone: 'note', text: 'Scope noted: 5 pages, contact form, blog' },
-  { id: 'm5', from: 'buyer', sentAt: minutesAgo(20), text: 'Can we just agree on $300 here?' },
-  {
-    id: 'm6',
-    from: 'system',
-    tone: 'warning',
-    text: "Prices can't be changed in chat. Your agent makes offers through the negotiation.",
-  },
-]
+/** The chat history of one demo negotiation, about its own service. */
+export function demoMessagesFor(service: string): ChatMessage[] {
+  return [
+    { id: 'm1', from: 'seller', sentAt: minutesAgo(25), text: `Hi! What exactly do you need for the ${service}?` },
+    { id: 'm2', from: 'buyer', sentAt: minutesAgo(23), text: 'The scope is clear, and I need it done by the end of the month.' },
+    { id: 'm3', from: 'seller', sentAt: minutesAgo(22), text: 'Great. I can fit that if the scope stays as described.' },
+    { id: 'm4', from: 'system', tone: 'note', text: `Scope noted: ${service}` },
+    { id: 'm5', from: 'buyer', sentAt: minutesAgo(20), text: 'Can we just agree on a lower price here?' },
+    {
+      id: 'm6',
+      from: 'system',
+      tone: 'warning',
+      text: "Prices can't be changed in chat. Your agent makes offers through the negotiation.",
+    },
+  ]
+}
 
-export function demoEndedSession(id: string): EndedSession {
+export function demoEndedSession(id: string, deal: DealInfo = ENDED_BUYER_DEAL): EndedSession {
+  const at = (ratio: number) => round5(deal.listPrice * ratio)
   return {
     id,
-    service: '5-page business website',
-    sellerName: 'Maya Santos',
+    service: deal.service,
+    sellerName: deal.counterpartName,
     rounds: [
-      { round: 1, buyer: 240, seller: 500 },
-      { round: 2, buyer: 270, seller: 460 },
-      { round: 3, buyer: 300, seller: 420 },
+      { round: 1, buyer: at(0.48), seller: at(1) },
+      { round: 2, buyer: at(0.54), seller: at(0.92) },
+      { round: 3, buyer: at(0.6), seller: at(0.84) },
     ],
     rematches: [
       {
@@ -337,6 +356,6 @@ export function demoEndedSession(id: string): EndedSession {
         listPrice: 320,
         reasons: ['Related scope: website redesign', 'Available now', 'Delivery in 4 days'],
       },
-    ],
+    ].filter((r) => r.title !== deal.service),
   }
 }

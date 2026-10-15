@@ -81,6 +81,7 @@ export const realApi: Api = {
   createSellerListing: (input) => request('/seller/listings', { method: 'POST', body: input }),
   updateSellerListing: (id, input) => request(`/seller/listings/${enc(id)}`, { method: 'PUT', body: input }),
   getSellerActiveNegotiation: () => request('/seller/active-negotiation'),
+  listSellerSales: () => request('/seller/sales'),
   async listSellerNegotiations() {
     const rows = await request<SellerNegotiationRow[]>('/seller/negotiations')
     // Be forgiving about fields the back end may leave out.

@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_PAYPAL_CLIENT_ID?: string
   /** Optional: a different PayPal JS SDK v6 address. Defaults to the sandbox one. */
   readonly VITE_PAYPAL_SDK_URL?: string
+  /** Optional: AG Studio licence key (a free 45-day trial key works). Not needed to run locally. */
+  readonly VITE_AG_STUDIO_LICENSE?: string
   /** Polling interval in milliseconds. Defaults to 3000. */
   readonly VITE_POLL_MS?: string
 }

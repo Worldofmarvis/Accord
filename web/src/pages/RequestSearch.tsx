@@ -37,10 +37,10 @@ export default function RequestSearch() {
   return (
     <div className="page-stack">
       <div>
-        <h1>Search buyer requests</h1>
+        <h1>Find customers</h1>
         <p className="muted">
-          See what buyers need, then offer one of your listings. The buyer accepts your proposal before the
-          negotiation starts.
+          See who needs a service, what they need and by when. Then send a proposal with one of your listings. The
+          buyer accepts it before the negotiation starts.
         </p>
       </div>
 
@@ -85,13 +85,13 @@ export default function RequestSearch() {
         <p className="muted small">Your agent will negotiate using your listing "{starter.selected.title}".</p>
       )}
 
-      {starter.problem && <StartNotice problem={starter.problem} />}
+      {starter.problem && starter.problem.kind !== 'sent' && <StartNotice problem={starter.problem} />}
 
       <div className="search-results-head">
         <h2>
           {search.data ? (
             <>
-              {results.length} {results.length === 1 ? 'request' : 'requests'}
+              {results.length} {results.length === 1 ? 'buyer' : 'buyers'} looking for a service
               {keyword && <> for "{keyword}"</>}
               {filters.category && <> in {filters.category}</>}
             </>
@@ -120,7 +120,7 @@ export default function RequestSearch() {
         {search.error == null && search.loading && !search.data && <LoadingCard label="Searching..." />}
         {search.error == null && search.data && results.length === 0 && (
           <div className="card search-empty">
-            <p className="muted">No requests match these filters. Try fewer words or another category.</p>
+            <p className="muted">No buyers match these filters. Try fewer words or another category.</p>
             {hasFilters && (
               <button type="button" className="btn btn-secondary" onClick={() => setFilters(NO_FILTERS)}>
                 Clear filters
@@ -134,6 +134,7 @@ export default function RequestSearch() {
               key={r.id}
               request={r}
               busy={starter.busyId === r.id}
+              sent={starter.sent.has(r.id)}
               onNegotiate={(request) => void starter.start({ id: request.id, name: request.buyerName })}
             />
           ))}

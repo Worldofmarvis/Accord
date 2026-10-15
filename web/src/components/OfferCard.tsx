@@ -12,13 +12,14 @@ type Props = {
   /** Only the viewer's own limits are ever passed in. The other side's are never sent to the browser. */
   buyerLimits?: { target: number; max: number }
   sellerLimits?: { floor: number }
+  className?: string
 }
 
-export default function OfferCard({ role, viewerRole, currentRound, offer, buyerLimits, sellerLimits }: Props) {
+export default function OfferCard({ role, viewerRole, currentRound, offer, buyerLimits, sellerLimits, className }: Props) {
   const mine = role === viewerRole
   const title = mine ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent'
   return (
-    <section aria-label={title} className="card offer-card">
+    <section aria-label={title} className={`card offer-card offer-card-${role}${className ? ` ${className}` : ''}`}>
       <div className="offer-card-head">
         <span className={`marker ${role === 'buyer' ? 'marker-buyer' : 'marker-seller'}`} />
         <h2>{title}</h2>

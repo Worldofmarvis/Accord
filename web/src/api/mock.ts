@@ -5,6 +5,9 @@ import type { Api } from './types'
 import { approvalStatus } from '../lib/approval'
 import { relevance } from '../lib/search'
 import {
+  DEFAULT_BUYER_DEAL,
+  DEFAULT_SELLER_DEAL,
+  ENDED_BUYER_DEAL,
   DEMO_AGREED_ID,
   DEMO_ENDED_ID,
   DEMO_NEGOTIATION_ID,
@@ -13,12 +16,13 @@ import {
   demoAgreedNegotiation,
   demoEndedNegotiation,
   demoEndedSession,
-  demoMessages,
+  demoMessagesFor,
   demoNegotiation,
   demoSellerEndedNegotiation,
   demoSellerNegotiation,
   listings,
   openRequests,
+  type DealInfo,
 } from '../data/mock'
 import {
   buyerNegotiations,
@@ -26,8 +30,9 @@ import {
   initialSellerListings,
   sellerActiveNegotiation,
   sellerNegotiations,
+  sellerSales,
 } from '../data/dashboardMock'
-import type { BuyerRequest, SellerListing } from '../types/dashboard'
+import type { BuyerRequest, SaleOutcome, SellerListing, SellerSale } from '../types/dashboard'
 import type { ChatMessage, DealApproval, Decision, Listing, Payment, SearchQuery } from '../types/marketplace'
 import type { Role } from '../types/me'
 import type { OpenRequest, Proposal, RequestQuery } from '../types/proposal'
@@ -39,7 +44,16 @@ const PRICE_PATTERN = /\$\s?\d|\b\d+\s?(usd|dollars)\b/i
 const PRICE_WARNING = "Prices can't be changed in chat. Your agent makes offers through the negotiation."
 
 // In-memory state, so things the user adds during a demo show up on the other screens.
-let messages: ChatMessage[] = [...demoMessages]
+// Each negotiation has its own chat, about its own service.
+const chats = new Map<string, ChatMessage[]>()
+const chatOf = (id: string): ChatMessage[] => {
+  let list = chats.get(id)
+  if (!list) {
+    list = demoMessagesFor(dealOf(id).service)
+    chats.set(id, list)
+  }
+  return list
+}
 let buyerRequests: BuyerRequest[] = [...initialBuyerRequests]
 let sellerListings: SellerListing[] = [...initialSellerListings]
 let counter = 0
@@ -165,6 +179,17 @@ const patchProposal = (id: string, patch: Partial<MockProposal>) => {
  * or answer something that is no longer possible. The real back end does the same in one transaction.
  */
 function acceptProposalNow(role: Role, p: MockProposal) {
+  // The negotiation is about this proposal's service, with its other side. Chats start fresh.
+  const myRequest = role === 'buyer' ? buyerRequests.find((r) => r.id === p.request.id) : undefined
+  const myListing = role === 'seller' ? sellerListings.find((l) => l.id === p.listing.id) : undefined
+  acceptedDeal[role] = {
+    service: p.listing.title,
+    counterpartName: role === 'buyer' ? p.listing.sellerName : p.request.buyerName,
+    listPrice: p.listing.listPrice,
+    ...(myRequest && { buyerLimits: { target: myRequest.target, max: myRequest.max } }),
+    ...(myListing && { floor: myListing.priceFloor }),
+  }
+  chats.delete(negotiationFor(role))
   lockedListings.add(lockKey(role, p.listing.id))
   lockedRequests.add(lockKey(role, p.request.id))
   proposals = proposals.map((x) => {
@@ -193,6 +218,18 @@ function filterRequests(items: OpenRequest[], q: RequestQuery): OpenRequest[] {
 }
 
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'We could not find that negotiation.')
+
+// The service and the other person of each demo negotiation. The live one ("demo") is whatever
+// proposal was accepted last on that side; until then it is the default scenario.
+const acceptedDeal: Partial<Record<Role, DealInfo>> = {}
+const N1_DEAL: DealInfo = { service: '5-page business website', counterpartName: 'Maya Santos', listPrice: 500 }
+
+function dealOf(id: string): DealInfo {
+  if (id === 'n1') return N1_DEAL
+  if (id === DEMO_ENDED_ID) return ENDED_BUYER_DEAL
+  if (id === DEMO_SELLER_NEGOTIATION_ID) return acceptedDeal.seller ?? DEFAULT_SELLER_DEAL
+  return acceptedDeal.buyer ?? DEFAULT_BUYER_DEAL
+}
 
 const isKnownNegotiation = (id: string) =>
   id === DEMO_NEGOTIATION_ID ||
@@ -416,15 +453,16 @@ export const mockApi: Api = {
     }
     if (id === DEMO_SELLER_NEGOTIATION_ID) {
       if (demoRole !== 'seller') throw notYours()
-      return demoSellerNegotiation(id)
+      return demoSellerNegotiation(id, dealOf(id))
     }
     if (demoRole !== 'buyer') throw notYours()
-    return id === DEMO_ENDED_ID ? demoEndedNegotiation(id) : demoNegotiation(id)
+    return id === DEMO_ENDED_ID ? demoEndedNegotiation(id, dealOf(id)) : demoNegotiation(id, dealOf(id))
   },
 
   async getMessages(id, afterId) {
     await delay(100)
     if (!isKnownNegotiation(id)) throw notFound()
+    const messages = chatOf(id)
     if (!afterId) return [...messages]
     const index = messages.findIndex((m) => m.id === afterId)
     return index === -1 ? [...messages] : messages.slice(index + 1)
@@ -440,7 +478,7 @@ export const mockApi: Api = {
     if (PRICE_PATTERN.test(clean)) {
       created.push({ id: nextId('w'), from: 'system', tone: 'warning', text: PRICE_WARNING })
     }
-    messages = [...messages, ...created]
+    chats.set(id, [...chatOf(id), ...created])
     return created
   },
 
@@ -479,7 +517,7 @@ export const mockApi: Api = {
     await delay()
     if (id === 'n1') throw new ApiError(409, 'VALIDATION', 'This negotiation has not ended yet.')
     if (id !== DEMO_ENDED_ID && id !== DEMO_NEGOTIATION_ID) throw notFound()
-    return demoEndedSession(id)
+    return demoEndedSession(id, dealOf(id))
   },
 
   async listBuyerRequests() {
@@ -536,6 +574,33 @@ export const mockApi: Api = {
     return sellerNegotiations.map((r) =>
       r.id === DEMO_AGREED_ID ? { ...r, deal: approvalStatus(approval.buyer, approval.seller) } : { ...r },
     )
+  },
+
+  async listSellerSales() {
+    await delay()
+    // The settled demo deal follows the shared approval and payment state, so paying on the Payment
+    // screen turns it into a sale here. Everything else is earlier history.
+    const approved = approvalStatus(approval.buyer, approval.seller)
+    const outcome: SaleOutcome =
+      payment.status === 'paid'
+        ? 'paid'
+        : approved === 'approved'
+          ? 'awaiting_payment'
+          : approved === 'declined'
+            ? 'declined'
+            : 'awaiting_approval'
+    const live: SellerSale = {
+      id: DEMO_AGREED_ID,
+      date: payment.paidAt ?? new Date().toISOString(),
+      service: '5-page business website',
+      buyerName: 'Ben Carter',
+      listPrice: 500,
+      priceFloor: 320,
+      agreedPrice: 380,
+      rounds: 3,
+      outcome,
+    }
+    return [live, ...sellerSales]
   },
 
   async getSellerActiveNegotiation() {

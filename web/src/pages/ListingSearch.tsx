@@ -106,7 +106,7 @@ export default function ListingSearch() {
         <p className="muted small">Your agent will negotiate using your request "{starter.selected.title}".</p>
       )}
 
-      {starter.problem && <StartNotice problem={starter.problem} />}
+      {starter.problem && starter.problem.kind !== 'sent' && <StartNotice problem={starter.problem} />}
 
       <div className="search-results-head">
         <h2>
@@ -156,6 +156,7 @@ export default function ListingSearch() {
               key={l.id}
               listing={l}
               busy={starter.busyId === l.id}
+              sent={starter.sent.has(l.id)}
               onNegotiate={(listing) => void starter.start({ id: listing.id, name: listing.sellerName })}
             />
           ))}

@@ -62,6 +62,7 @@ The front end and back end owners should go through "Questions to agree on". Eac
   "id": "q1",
   "title": "Blog posts for a bakery",
   "buyerName": "Sofia Alvarez",
+  "buyerAvatarUrl": "https://example.com/avatars/sofia.jpg",   // optional photo; the seller's card shows initials without it
   "category": "Writing",
   "deliverables": "3 posts of 600 words, friendly tone",
   "deadline": "2026-10-28",
@@ -254,6 +255,7 @@ The front end calls `GET .../payment` every 3 seconds until `status` is `paid`, 
 | `POST /api/seller/listings` | Same fields without `id`. Returns the stored listing. Validation: `priceFloor <= listPrice` (`400 VALIDATION`). |
 | `PUT /api/seller/listings/:id` | Same fields. Returns the stored listing. `409 SELLER_LOCKED` if the listing is in an active negotiation. |
 | `GET /api/seller/active-negotiation` | `{ "negotiationId": "n1", "listingId": "l1", "round": 2, "maxRounds": 3 }` or `null` |
+| `GET /api/seller/sales` | The seller's **sales history**, newest first: every negotiation that is settled or over (not the active one). `SellerSale[]` (below). |
 | `GET /api/seller/negotiations` | The seller's whole history, newest first, so a negotiation can be found again after it ends: `SellerNegotiationRow[]` (below). The counterpart of `GET /api/buyer/negotiations`. |
 
 `SellerNegotiationRow`:
@@ -274,6 +276,24 @@ The front end calls `GET .../payment` every 3 seconds until `status` is `paid`, 
 ```
 
 Rows never contain the buyer's `target` or `max` (rule 2). The dashboard links each row to `/negotiations/:id` (active, or no agreement: the seller's own view, their floor and their agent) or `/negotiations/:id/pay` (agreed: the approval screen, see "Approval before payment"). While any row is `active`, or `agreed` with `deal: "pending"`, the front end asks again every 3 seconds, and it stops by itself once nothing is moving. The seller's negotiation page also follows `GET .../approval` after "agreed" until the deal is approved or declined.
+
+`SellerSale` (the sales history screen, `/seller/history`):
+
+```jsonc
+{
+  "id": "n7",                      // the negotiation id
+  "date": "2026-10-14T09:30:00Z",  // ISO 8601: when it was paid; otherwise when it was agreed, declined or ended
+  "service": "5-page business website",
+  "buyerName": "Ben Carter",
+  "listPrice": 500,
+  "priceFloor": 320,               // the seller's OWN floor for that listing (never the buyer's limits, rule 2)
+  "agreedPrice": 380,              // null when outcome is "no_agreement"
+  "rounds": 3,                     // 1 to 3
+  "outcome": "paid"                // "paid" | "awaiting_approval" | "awaiting_payment" | "declined" | "no_agreement"
+}
+```
+
+How `outcome` is decided (server side): `no_agreement` when the negotiation ended without a price. For an agreed one: `declined` if either human declined, `paid` once its `Payment` is `paid` (and `date` is `paidAt`), `awaiting_payment` when both approved and nothing is paid yet, otherwise `awaiting_approval`. Only the seller's own negotiations are returned (`403`/empty for anyone else). The front end derives everything else (discount, "above floor", revenue, averages) from these fields, so the totals are always counted the same way: **revenue and "sales" count only `paid` deals**, at `agreedPrice`. The screen asks again every 3 seconds while any row is `awaiting_approval` or `awaiting_payment`, and stops by itself once none is.
 
 ### Not defined yet
 
@@ -296,6 +316,7 @@ Tick the box when the back end agrees, or edit the answer.
 | [ ] | **Approval rules:** is each answer final, and can payment start before both approve? | Each answer is final. Either decline closes the deal. Payment is locked until both approve, and the API refuses to create or capture an order before that. |
 | [ ] | **Proposals:** does every negotiation start with a proposal that the other side accepts? | Yes, for both directions (see "Proposals"). A buyer picks one of their saved requests that is not in a negotiation (the first by default) and sends `{ role: "buyer", listingId, requestId }`. A seller picks one of their listings that is not in a negotiation and sends the same body with `role: "seller"`. There is no `POST /api/negotiations`. |
 | [ ] | **Proposal rules:** can a proposal expire or be withdrawn? When exactly does a lock begin? | No expiry. The sender can **withdraw** a pending proposal (`POST .../withdraw`). The lock begins only when a proposal is **accepted**, and it covers the listing **and** the request. Accepting also declines every other pending proposal for either of them (`closedReason: "taken"`). If two are accepted at once, the second accept returns `409 SELLER_LOCKED` or `409 REQUEST_LOCKED`. A lock ends when the negotiation ends with no deal or the deal is declined. |
+| [ ] | **Sales history:** what does the seller's history screen read? | `GET /api/seller/sales` returns one `SellerSale` per settled or ended negotiation, newest first, with `outcome` worked out on the server from the approval and the payment (see "Seller dashboard"). Revenue only counts `paid` deals. Active negotiations are not in it. |
 | [ ] | **Seller history:** can a seller find a negotiation again after it agreed or ended? | Yes: `GET /api/seller/negotiations` returns every negotiation (active, agreed, no agreement), like the buyer's list, and carries the approval status of agreed ones. |
 | [ ] | **Accounts with both roles:** which side does `/api/proposals` return? | Neither by guessing. The front end always sends `role` (`GET /api/proposals?role=`, `POST /api/proposals` body `role`), and the lists are never mixed. |
 | [ ] | **Self-deals:** can a person propose their own listing to their own request? | No. `400 VALIDATION` on send and on accept. Listings and open requests carry `mine` so the screens can disable the button. |

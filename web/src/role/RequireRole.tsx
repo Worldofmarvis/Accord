@@ -1,27 +1,16 @@
-import { useEffect, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
 import type { Role } from '../types/me'
+import { homePath } from './home'
 import { useRole } from './useRole'
 
 /**
- * Wraps a page that belongs to one side. A person with both roles who opens the page
- * (for example from a link) is switched to that side. A person without the role sees a
- * message instead. This only hides pages: the API must still refuse the data itself.
+ * Wraps a page that belongs to one side. Whoever chose the other side on the first screen is sent
+ * to their own start page: a seller never ends up on a buyer page, and the other way round.
+ * This only hides pages: the API must still refuse the data itself.
  */
 export default function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const state = useRole()
-  const allowed = state.me.roles.includes(role)
-  const { setRole } = state
-
-  useEffect(() => {
-    if (allowed) setRole(role)
-  }, [allowed, role, setRole])
-
-  if (!allowed) {
-    return (
-      <div className="state-card state-card-error" role="alert">
-        <p>This page is for {role}s, and your account does not have that role.</p>
-      </div>
-    )
-  }
+  if (state.role !== role) return <Navigate to={homePath(state.role)} replace />
   return <>{children}</>
 }

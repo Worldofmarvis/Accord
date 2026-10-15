@@ -40,6 +40,8 @@ export function useStartNegotiation(role: Role, onLocked?: () => void) {
   const [pickedId, setPickedId] = useState<string>()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [problem, setProblem] = useState<StartProblem | null>(null)
+  // The listings or requests a proposal was sent for, so their cards can show "Proposal sent".
+  const [sent, setSent] = useState<ReadonlySet<string>>(new Set())
 
   const list = options.data?.list ?? []
   const selected = list.find((o) => o.id === pickedId) ?? list[0]
@@ -73,6 +75,7 @@ export function useStartNegotiation(role: Role, onLocked?: () => void) {
           : { role, listingId: selected.id, requestId: counterpart.id },
       )
       setProblem({ kind: 'sent', name: counterpart.name })
+      setSent((prev) => new Set(prev).add(counterpart.id))
       refreshIncomingProposals()
     } catch (e) {
       if (e instanceof ApiError && e.code === 'SELLER_LOCKED') {
@@ -90,5 +93,5 @@ export function useStartNegotiation(role: Role, onLocked?: () => void) {
     }
   }
 
-  return { options: list, selected, pick: setPickedId, start, busyId, problem }
+  return { options: list, selected, pick: setPickedId, start, busyId, problem, sent }
 }

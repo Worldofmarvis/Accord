@@ -29,6 +29,8 @@ export type OpenRequest = {
   id: string
   title: string
   buyerName: string
+  /** Optional photo of the buyer. Without it the card shows the buyer's initials. */
+  buyerAvatarUrl?: string
   category: string
   deliverables: string
   /** YYYY-MM-DD */

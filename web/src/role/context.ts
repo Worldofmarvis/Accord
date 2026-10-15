@@ -3,9 +3,8 @@ import type { Me, Role } from '../types/me'
 
 export type RoleState = {
   me: Me
-  /** Which side the person is looking at right now. Always one of `me.roles`. */
+  /** The side chosen on the first screen (or the only side the account has). It does not change in this tab. */
   role: Role
-  setRole: (role: Role) => void
 }
 
 export const RoleContext = createContext<RoleState | null>(null)
