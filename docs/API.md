@@ -219,7 +219,7 @@ Only the buyer pays, and only after both sides approved. The front end shows Pay
 }
 ```
 
-The front end calls `GET .../payment` every 3 seconds until `status` is `paid`, so the seller sees the payment arrive. Setup: the front end loads PayPal's JS SDK with the **sandbox client ID** (`VITE_PAYPAL_CLIENT_ID` in `web/.env`). The PayPal **secret** stays on the server only.
+The front end calls `GET .../payment` every 3 seconds until `status` is `paid`, so the seller sees the payment arrive. Setup: the front end uses **PayPal's JS SDK v6**. It loads `https://www.sandbox.paypal.com/web-sdk/v6/core`, creates the SDK instance with the **sandbox client ID** (`VITE_PAYPAL_CLIENT_ID` in `web/.env`) and the `paypal-payments` component, and shows a `<paypal-button>`. On click it starts a one-time payment session with the order id from `POST .../payment/order`, and after the buyer approves it calls `POST .../payment/capture`. The PayPal **secret** stays on the server only. See https://developer.paypal.com/checkout/integrate.
 
 ### Session ended
 

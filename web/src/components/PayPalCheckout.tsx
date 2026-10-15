@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, errorMessage, PAYPAL_CLIENT_ID, USE_MOCK } from '../api'
 import { usd } from '../lib/format'
-import { loadPayPalSdk, type PayPalButtons } from '../lib/paypal'
+import { loadPayPalSdk } from '../lib/paypal'
 import type { Payment } from '../types/marketplace'
 
 type Props = {
@@ -14,14 +14,16 @@ type Props = {
 type Notice = { tone: 'warning' | 'danger'; text: string }
 
 const CANCELLED: Notice = { tone: 'warning', text: 'Payment cancelled. Nothing was charged. You can try again.' }
+// Nothing is marked as paid unless the server says PayPal confirmed it, so this wording stays true
+// even if PayPal reports the problem after the buyer approved.
 const FAILED: Notice = {
   tone: 'danger',
-  text: "PayPal couldn't complete the payment. Nothing was charged. Please try again.",
+  text: "PayPal couldn't complete the payment. Nothing is marked as paid unless PayPal confirms it. Please try again.",
 }
 
 /**
  * The buyer's pay step.
- * - Real mode: PayPal's own buttons. The server creates and captures the order, so the amount cannot be changed here.
+ * - Real mode: PayPal's own button (JS SDK v6). The server creates and captures the order, so the amount cannot be changed here.
  * - Demo mode (VITE_USE_MOCK=true): one button that runs the same two calls against the demo data.
  */
 export default function PayPalCheckout(props: Props) {
@@ -38,12 +40,12 @@ export default function PayPalCheckout(props: Props) {
 
 function PayPalButtonsCheckout({ negotiationId, amount, onPaid }: Props) {
   const box = useRef<HTMLDivElement>(null)
-  const [sdk, setSdk] = useState<'loading' | 'ready' | 'failed'>('loading')
+  const [sdk, setSdk] = useState<'loading' | 'ready' | 'unavailable' | 'failed'>('loading')
   const [attempt, setAttempt] = useState(0)
   const [capturing, setCapturing] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
 
-  // The buttons are drawn once, so they read the latest props through this ref.
+  // The button is drawn once, so it reads the latest props through this ref.
   const latest = useRef({ negotiationId, onPaid })
   useEffect(() => {
     latest.current = { negotiationId, onPaid }
@@ -51,26 +53,28 @@ function PayPalButtonsCheckout({ negotiationId, amount, onPaid }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    let buttons: PayPalButtons | null = null
+    const holder = box.current
 
-    loadPayPalSdk(PAYPAL_CLIENT_ID)
-      .then(async (paypal) => {
-        if (cancelled || !box.current) return
-        buttons = paypal.Buttons({
-          style: { layout: 'vertical', shape: 'rect', label: 'pay', height: 48 },
-          createOrder: async () => {
-            setNotice(null)
-            try {
-              return (await api.createPaymentOrder(latest.current.negotiationId)).orderId
-            } catch (e) {
-              setNotice({ tone: 'danger', text: errorMessage(e) })
-              throw e
-            }
-          },
-          onApprove: async (data) => {
+    async function setup() {
+      try {
+        // 1. Load the v6 script and create the SDK instance with the public sandbox client ID.
+        const paypal = await loadPayPalSdk()
+        const instance = await paypal.createInstance({ clientId: PAYPAL_CLIENT_ID, components: ['paypal-payments'] })
+
+        // 2. Only show the button if PayPal is allowed for this browser and account.
+        const methods = await instance.findEligibleMethods()
+        if (cancelled) return
+        if (!methods.isEligible('paypal')) {
+          setSdk('unavailable')
+          return
+        }
+
+        // 3. A one-time payment session. The server captures the order, so `paid` comes from its answer.
+        const session = await instance.createPayPalOneTimePaymentSession({
+          onApprove: async ({ orderId }) => {
             setCapturing(true)
             try {
-              latest.current.onPaid(await api.capturePayment(latest.current.negotiationId, data.orderID))
+              latest.current.onPaid(await api.capturePayment(latest.current.negotiationId, orderId))
             } catch (e) {
               setNotice({ tone: 'danger', text: errorMessage(e) })
             } finally {
@@ -81,17 +85,43 @@ function PayPalButtonsCheckout({ negotiationId, amount, onPaid }: Props) {
           // Keep a more specific message (from createOrder) if there already is one.
           onError: () => setNotice((n) => n ?? FAILED),
         })
-        if (!buttons.isEligible()) throw new Error('PayPal buttons are not available.')
-        await buttons.render(box.current)
-        if (!cancelled) setSdk('ready')
-      })
-      .catch(() => {
+        if (cancelled || !holder) return
+
+        // 4. PayPal's button. On click, our server creates the order and PayPal opens with it.
+        const button = document.createElement('paypal-button')
+        let starting = false
+        button.addEventListener('click', async () => {
+          if (starting) return
+          starting = true
+          try {
+            const orderPromise = (async () => {
+              setNotice(null)
+              try {
+                return { orderId: (await api.createPaymentOrder(latest.current.negotiationId)).orderId }
+              } catch (e) {
+                setNotice({ tone: 'danger', text: errorMessage(e) })
+                throw e
+              }
+            })()
+            await session.start({ presentationMode: 'auto' }, orderPromise)
+          } catch {
+            // The reason is already on screen (createOrder) or arrives through onError.
+            if (!cancelled) setNotice((n) => n ?? FAILED)
+          } finally {
+            starting = false
+          }
+        })
+        holder.replaceChildren(button)
+        setSdk('ready')
+      } catch {
         if (!cancelled) setSdk('failed')
-      })
+      }
+    }
+    void setup()
 
     return () => {
       cancelled = true
-      void buttons?.close().catch(() => {})
+      holder?.replaceChildren()
     }
   }, [attempt])
 
@@ -105,6 +135,11 @@ function PayPalButtonsCheckout({ negotiationId, amount, onPaid }: Props) {
         <p className="muted" role="status">
           Loading PayPal...
         </p>
+      )}
+      {sdk === 'unavailable' && (
+        <div className="notice notice-warning" role="alert">
+          PayPal isn&apos;t available for this browser or account.
+        </div>
       )}
       {sdk === 'failed' && (
         <div className="notice notice-danger" role="alert">
@@ -122,7 +157,7 @@ function PayPalButtonsCheckout({ negotiationId, amount, onPaid }: Props) {
         </div>
       )}
 
-      {/* PayPal draws its buttons in here. Hidden while we confirm the payment so it cannot be paid twice. */}
+      {/* PayPal's button is added in here. Hidden while we confirm the payment so it cannot be paid twice. */}
       <div ref={box} className="paypal-buttons" hidden={capturing} />
 
       {capturing && (
