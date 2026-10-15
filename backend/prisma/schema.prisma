@@ -1,0 +1,164 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Supabase: direct connection, used by migrations
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  BUYER
+  SELLER
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum NegotiationStatus {
+  OPEN
+  IN_PROGRESS
+  AGREED
+  FAILED
+  CANCELLED
+}
+
+enum OfferBy {
+  BUYER_AGENT
+  SELLER_AGENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(BUYER)
+  roles     Role[]   @default([BUYER, SELLER])
+
+  listings     Listing[]
+  requests     BuyerRequest[]
+  messages     Message[]
+  negotiations Negotiation[]   // NEW: negotiations where this user is the buyer
+  createdAt    DateTime @default(now())
+}
+
+model BuyerRequest {
+  id           String   @id @default(uuid())
+  buyerId      String
+  buyer        User     @relation(fields: [buyerId], references: [id])
+  title        String
+  category     String
+  deliverables String
+  deadline     String
+  targetPrice  Int      // CHANGED: Float -> Int (whole US dollars)
+  maxPrice     Int      // CHANGED: Float -> Int
+  createdAt    DateTime @default(now())
+
+  proposals    Proposal[]
+}
+
+model Listing {
+  id           String   @id @default(uuid())
+  sellerId     String
+  seller       User     @relation(fields: [sellerId], references: [id])
+  title        String
+  description  String?
+  category     String
+  deliverables String   @default("")   // NEW
+  tags         String[] @default([])   // NEW: extra search words
+  listPrice    Int                     // CHANGED: Float -> Int
+  floorPrice   Int                     // CHANGED: Float -> Int. Private: Never leak to buyer front-end
+  deliveryDays Int      @default(7)
+  createdAt    DateTime @default(now())
+
+  negotiations Negotiation[]
+  proposals    Proposal[]
+}
+
+model Proposal {
+  id            String         @id @default(uuid())
+  listingId     String
+  listing       Listing        @relation(fields: [listingId], references: [id])
+  requestId     String
+  request       BuyerRequest   @relation(fields: [requestId], references: [id])
+  status        ProposalStatus @default(PENDING)
+  negotiationId String?        @unique
+  negotiation   Negotiation?   @relation(fields: [negotiationId], references: [id])
+  createdAt     DateTime       @default(now())
+}
+
+model Negotiation {
+  id               String            @id @default(uuid())
+  listingId        String
+  buyerId          String
+  buyer            User              @relation(fields: [buyerId], references: [id]) // NEW relation
+  currentRound     Int               @default(1)
+  maxRounds        Int               @default(3)   // NEW
+  status           NegotiationStatus @default(OPEN)
+  buyerTargetPrice Int?                            // NEW: private to the buyer
+  buyerMaxPrice    Int?                            // CHANGED: Float -> Int. Private to the buyer
+  finalPrice       Int?                            // CHANGED: Float -> Int
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  listing     Listing      @relation(fields: [listingId], references: [id])
+  proposal    Proposal?
+  offers      Offer[]
+  messages    Message[]
+  payments    Payment[]
+  auditEvents AuditEvent[]
+}
+
+model Offer {
+  id            String      @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
+  roundNumber   Int
+  offeredBy     OfferBy
+  proposedPrice Int         // CHANGED: Float -> Int
+  reasoning     String?
+  blockedPrice  Int?        // NEW: what the agent proposed, if the engine replaced it
+  blockedReason String?     // NEW: why the engine replaced it
+  createdAt     DateTime    @default(now())
+}
+
+model Message {
+  id            String      @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
+  senderId      String?     // CHANGED: optional, system messages have no sender
+  sender        User?       @relation(fields: [senderId], references: [id])
+  content       String
+  tone          String?     // NEW: "note" or "warning" for system messages
+  createdAt     DateTime    @default(now())
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  negotiationId String
+  negotiation   Negotiation   @relation(fields: [negotiationId], references: [id])
+  paypalOrderId String        @unique
+  amount        Int           // CHANGED: Float -> Int
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid())
+  negotiationId String?
+  eventType     String   // e.g. "OFFER_SUBMITTED", "AUTO_ACCEPTED", "COUNTER_OFFER"
+  payload       String   // JSON formatted metadata
+  createdAt     DateTime @default(now())
+
+  negotiation Negotiation? @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+}
