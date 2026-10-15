@@ -1,0 +1,36 @@
+/* Loading, error and notice states. All values come from tokens.css. */
+
+.state-card {
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.state-card p {
+  margin: 0 0 var(--space-3);
+}
+
+.state-card-error {
+  color: var(--color-danger-strong);
+  background: var(--color-danger-soft);
+  border: none;
+}
+
+.notice-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
+}
+
+/* A small line for "connection problem, still trying" under a screen's heading. */
+.notice-inline {
+  margin: 0;
+}
+
+.request-private {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

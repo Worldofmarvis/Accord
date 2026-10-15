@@ -26,10 +26,26 @@ export function SearchIcon({ size = 18, color = 'currentColor' }: IconProps) {
   )
 }
 
+export function ChatIcon({ size = 22, color = 'currentColor' }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} stroke={color} strokeWidth={2.2}>
+      <path d="M4 5h16a1 1 0 011 1v10a1 1 0 01-1 1H10l-5 4v-4H4a1 1 0 01-1-1V6a1 1 0 011-1z" />
+    </svg>
+  )
+}
+
 export function CloseIcon({ size = 22, color = 'currentColor' }: IconProps) {
   return (
     <svg {...base} width={size} height={size} stroke={color} strokeWidth={2.6}>
       <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
+export function CheckIcon({ size = 18, color = 'currentColor' }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} stroke={color} strokeWidth={2.8}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   )
 }

@@ -2,17 +2,19 @@ import Badge from './Badge'
 import { usd } from '../lib/format'
 import type { Negotiation } from '../types/marketplace'
 
-type Props = { negotiation: Negotiation }
+type Props = { negotiation: Negotiation; className?: string; /** Inside another card: no card frame and no title. */ embedded?: boolean }
 
 // Every offer is shown with the engine's verdict (rule 1: the engine enforces limits).
-export default function NegotiationLog({ negotiation }: Props) {
-  const { offers, round, waitingOn } = negotiation
+export default function NegotiationLog({ negotiation, className, embedded = false }: Props) {
+  const { offers, round, waitingOn, viewerRole } = negotiation
+  const agentName = (role: 'buyer' | 'seller') =>
+    role === viewerRole ? 'Your agent' : role === 'buyer' ? 'Buyer agent' : 'Seller agent'
   const sorted = [...offers].sort((a, b) => a.round - b.round || (a.role === 'buyer' ? -1 : 1))
   const tone = (r: number) => (r === round ? 'info' : 'neutral')
 
   return (
-    <section aria-label="Negotiation log" className="card">
-      <h2 className="card-title">Negotiation log</h2>
+    <section aria-label="Negotiation log" className={embedded ? undefined : `card${className ? ` ${className}` : ''}`}>
+      {!embedded && <h2 className="card-title">Negotiation log</h2>}
       <p className="muted small">Every offer is checked by the engine before it counts.</p>
 
       {sorted.map((o) => (
@@ -23,7 +25,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           <div className="log-body">
             <div className="log-title-row">
               <span className="log-title">
-                {o.role === 'buyer' ? 'Your agent' : 'Seller agent'} offered {usd(o.amount)}
+                {agentName(o.role)} offered {usd(o.amount)}
               </span>
               {!o.blocked && <span className="log-pass">Engine check: passed</span>}
             </div>
@@ -45,7 +47,7 @@ export default function NegotiationLog({ negotiation }: Props) {
           </div>
           <div className="log-body">
             <div className="callout callout-pending">
-              Waiting for {waitingOn === 'seller' ? "the seller agent's" : "your agent's"} counter-offer...
+              Waiting for {waitingOn === viewerRole ? "your agent's" : `the ${waitingOn} agent's`} counter-offer...
             </div>
           </div>
         </div>

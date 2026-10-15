@@ -1,0 +1,39 @@
+/* The seller's sales history. Every value comes from tokens.css. */
+
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
+.page-head h1 { margin: 0 0 var(--space-1); }
+.page-head p { margin: 0; }
+
+.history-card { display: flex; flex-direction: column; gap: var(--space-4); }
+.history-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); }
+.history-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip-count { margin-left: var(--space-1); font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+.chip.is-active .chip-count { color: inherit; }
+.history-hint { margin: 0; }
+.history-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.history-empty p { margin: 0; }
+
+/* The AG Studio dashboard sits in a soft frame. Colours of the charts follow the app's navy and blue
+   (chart palette variables from the AG Studio theming docs; ignored if a name does not exist). */
+.sales-studio {
+  width: 100%;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  --ag-chart-palette-fills-1-color: #003087;
+  --ag-chart-palette-fills-2-color: #0070e0;
+  --ag-chart-palette-fills-3-color: #6fa8ee;
+  --ag-chart-palette-fills-4-color: #9aa3b2;
+  --ag-chart-palette-fills-5-color: #b45f06;
+  --ag-chart-palette-fills-6-color: #0a7a43;
+}
+
+.sales-table-wrap { overflow-x: auto; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-md); }
+.sales-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.sales-table th, .sales-table td { padding: var(--space-3) var(--space-4); text-align: left; white-space: nowrap; }
+.sales-table thead th { background: var(--color-surface-muted); color: var(--color-text-muted); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
+.sales-table tbody td { border-bottom: var(--border-width) solid var(--color-border-soft); }
+.sales-table tbody tr:hover { background: var(--color-surface-hover); }
+.sales-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.sales-table tfoot th, .sales-table tfoot td { background: var(--color-surface-muted); font-weight: var(--weight-bold); }

@@ -53,8 +53,8 @@
   /* ---------- Color: negotiation roles (added) ---------- */
   --color-buyer: #0070e0; /* buyer agent card and chat bubbles */
   --color-buyer-soft: #e6f0fd;
-  --color-seller: #0b7a75; /* seller agent card and chat bubbles */
-  --color-seller-soft: #e1f3f1;
+  --color-seller: #003087; /* seller agent card and chat bubbles: PayPal navy, next to the buyer's PayPal blue */
+  --color-seller-soft: #e3e8f4;
 
   /* ---------- Focus ---------- */
   --focus-ring: 2px solid var(--color-accent-strong);
