@@ -113,6 +113,7 @@ model Negotiation {
 
   listing     Listing      @relation(fields: [listingId], references: [id])
   proposal    Proposal?
+  approval    DealApproval?
   offers      Offer[]
   messages    Message[]
   payments    Payment[]
@@ -161,4 +162,12 @@ model AuditEvent {
   createdAt     DateTime @default(now())
 
   negotiation Negotiation? @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+}
+
+model DealApproval {
+  negotiationId String      @id
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
+  buyer         String      @default("pending")   // "pending" | "approved" | "declined"
+  seller        String      @default("pending")
+  createdAt     DateTime    @default(now())
 }

@@ -1,5 +1,6 @@
 import { API_URL } from './config'
 import { ApiError, type ApiErrorCode } from './errors'
+import { getUserId } from './session'
 
 const KNOWN_CODES: ApiErrorCode[] = [
   'VALIDATION',
@@ -44,11 +45,13 @@ export async function request<T>(path: string, { method = 'GET', query, body }: 
 
   let res: Response
   try {
+    const userId = getUserId()
     res = await fetch(url, {
       method,
       credentials: 'include',
       headers: {
         Accept: 'application/json',
+        ...(userId ? { 'X-User-Id': userId } : {}),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

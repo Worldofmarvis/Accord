@@ -11,6 +11,7 @@ export async function loadNeg(id) {
   const r = await prisma.negotiation.findUnique({
     where: { id },
     include: {
+      buyer: true,
       listing: { include: { seller: true } },
       proposal: { include: { request: true } },
       offers: { orderBy: [{ roundNumber: 'asc' }, { offeredBy: 'asc' }] },   // buyer goes first in each round
@@ -31,7 +32,7 @@ export async function loadNeg(id) {
   return {
     id: r.id, listingId: r.listingId, sellerId: r.listing.sellerId, buyerId: r.buyerId,
     requestId: r.proposal?.requestId ?? null, category: r.listing.category,
-    service: r.listing.title, sellerName: r.listing.seller.name, listPrice: r.listing.listPrice,
+    service: r.listing.title, sellerName: r.listing.seller.name, buyerName: r.buyer.name, listPrice: r.listing.listPrice,
     status, round: r.currentRound, maxRounds: r.maxRounds, waitingOn,
     limits: {
       buyerTarget: r.buyerTargetPrice ?? req?.targetPrice ?? 0,
@@ -76,12 +77,13 @@ export async function saveNeg(n, knownOffers) {
 // What each side is allowed to see. "blocked" details are only shown to the side that made the offer.
 export function view(n, side) {
   const base = {
-    id: n.id, status: n.status, service: n.service, sellerName: n.sellerName, listPrice: n.listPrice,
-    round: n.round, maxRounds: n.maxRounds, waitingOn: n.waitingOn,
+    id: n.id, status: n.status, viewerRole: side, service: n.service,
+    counterpartName: side === 'buyer' ? n.sellerName : n.buyerName,
+    listPrice: n.listPrice, round: n.round, maxRounds: n.maxRounds, waitingOn: n.waitingOn,
     offers: n.offers.map(o => { const { blocked, ...rest } = o; return o.role === side ? o : rest }),
     agreedPrice: n.agreedPrice, paid: n.paid,
   }
   return side === 'buyer'
     ? { ...base, buyerLimits: { target: n.limits.buyerTarget, max: n.limits.buyerMax } }
-    : { ...base, sellerLimits: { priceFloor: n.limits.sellerFloor } }
+    : { ...base, sellerLimits: { floor: n.limits.sellerFloor } }
 }

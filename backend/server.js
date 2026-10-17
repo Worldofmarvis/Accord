@@ -5,6 +5,7 @@ import buyerRoutes from './routes/buyer.js'
 import sellerRoutes from './routes/seller.js'
 import negotiationRoutes from './routes/negotiations.js'
 import paymentRoutes from './routes/payments.js'
+import approvalRoutes from './routes/approval.js'
 
 const app = express()
 app.use(express.json())
@@ -24,6 +25,7 @@ app.use('/api', buyerRoutes)         // buyer dashboard
 app.use('/api', sellerRoutes)        // seller dashboard
 app.use('/api', negotiationRoutes)   // start, live view, outcome, chat
 app.use('/api', paymentRoutes)       // PayPal
+app.use('/api', approvalRoutes)       //approval
 
 // ---------- Errors ----------
 app.use('/api', (req, res) => fail(res, 404, 'NOT_FOUND', 'Unknown route'))

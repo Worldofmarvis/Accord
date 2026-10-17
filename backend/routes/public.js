@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { h } from '../lib/http.js'
+import { fail, h } from '../lib/http.js'
+import { currentUser } from '../lib/auth.js'
 import { lockedSellerIds } from '../lib/locks.js'
 import { publicListing } from '../lib/shapes.js'
 
@@ -10,6 +11,13 @@ const router = Router()
 router.get('/users/demo', h(async (req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' } })
   res.json(users.map(u => ({ id: u.id, name: u.name, role: u.role.toLowerCase() })))
+}))
+
+//added code here
+router.get('/me', h(async (req, res) => {
+  const user = await currentUser(req, async () => null)
+  if (!user) return fail(res, 401, 'UNAUTHENTICATED', 'Not signed in')
+  res.json({ id: user.id, name: user.name, roles: [user.role.toLowerCase()] })
 }))
 
 // Search
