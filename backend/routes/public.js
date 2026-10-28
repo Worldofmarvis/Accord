@@ -21,9 +21,20 @@ router.get('/me', h(async (req, res) => {
 }))
 
 // Search
-const score = (l, words) => words.reduce((sum, w) =>
-  sum + (l.title.toLowerCase().includes(w) ? 3 : 0) + (l.tags.some(t => t.includes(w)) ? 2 : 0) +
-  (l.category.toLowerCase().includes(w) ? 2 : 0) + ((l.description ?? '').toLowerCase().includes(w) ? 1 : 0), 0)
+const score = (l, words) => {
+  let total = 0
+  for (const w of words) {
+    const s =
+      (l.title.toLowerCase().includes(w) ? 3 : 0) +
+      (l.tags.some(t => t.toLowerCase().includes(w)) ? 2 : 0) +
+      (l.category.toLowerCase().includes(w) ? 2 : 0) +
+      ((l.description ?? '').toLowerCase().includes(w) ? 1 : 0) +
+      (l.seller.name.toLowerCase().includes(w) ? 2 : 0)
+    if (!s) return 0   // every word must match, otherwise the listing is dropped
+    total += s
+  }
+  return total
+}
 
 router.get('/listings', h(async (req, res) => {
   const { keyword = '', category = '', maxPrice = '', sort = 'match' } = req.query
