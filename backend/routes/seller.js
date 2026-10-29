@@ -127,6 +127,40 @@ router.get('/seller/negotiations', as('SELLER'), only('SELLER'), h(async (req, r
   }))
 }))
 
+// The seller's sales history: every negotiation that is settled or over (not the active one), newest first.
+router.get('/seller/sales', as('SELLER'), only('SELLER'), h(async (req, res) => {
+  const rows = await prisma.negotiation.findMany({
+    where: { listing: { sellerId: req.user.id }, status: { notIn: ['OPEN', 'IN_PROGRESS'] } },
+    include: { buyer: true, listing: true, approval: true, payments: { orderBy: { createdAt: 'desc' } } },
+  })
 
+  const sales = rows.map(n => {
+    const a = n.approval
+    const paid = n.payments.find(p => p.status === 'COMPLETED')
+    const declined = a && (a.buyer === 'declined' || a.seller === 'declined')
+    const bothApproved = a && a.buyer === 'approved' && a.seller === 'approved'
+    const outcome =
+      STATUS_IN[n.status] !== 'agreed' ? 'no_agreement'
+      : declined ? 'declined'
+      : paid ? 'paid'
+      : bothApproved ? 'awaiting_payment'
+      : 'awaiting_approval'
+
+    return {
+      id: n.id,
+      date: (paid?.createdAt ?? n.updatedAt).toISOString(),   // paidAt does not exist yet, so the payment's createdAt stands in
+      service: n.listing.title,
+      buyerName: n.buyer.name,
+      listPrice: n.listing.listPrice,
+      priceFloor: n.listing.floorPrice,                       // the seller's OWN floor, never the buyer's limits
+      agreedPrice: outcome === 'no_agreement' ? null : n.finalPrice,
+      rounds: Math.min(n.currentRound, n.maxRounds),
+      outcome,
+    }
+  })
+
+  sales.sort((x, y) => y.date.localeCompare(x.date))
+  res.json(sales)
+}))
 
 export default router
