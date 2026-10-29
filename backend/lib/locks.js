@@ -26,3 +26,12 @@ export async function lockedSellerIds() {
   })
   return new Set(rows.map(r => r.listing.sellerId))
 }
+
+// The ids of all requests that are in a negotiation right now.
+export async function lockedRequestIds() {
+  const rows = await prisma.negotiation.findMany({
+    where: lockWhere(),
+    select: { proposal: { select: { requestId: true } } },
+  })
+  return new Set(rows.map(r => r.proposal?.requestId).filter(Boolean))
+}
