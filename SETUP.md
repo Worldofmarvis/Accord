@@ -286,8 +286,8 @@ Payments only run in the PayPal **sandbox**: no real money moves.
 
 `API.md` is the contract. This is what the backend answers today:
 
-- **Built:** `/api/me`, `/api/users/demo`, `/api/listings`, the buyer and seller dashboard routes (`/buyer/requests`, `/buyer/negotiations`, `/seller/listings`, `/seller/active-negotiation`), `/negotiations/:id` with `/messages` and `/outcome`, the approval routes (`/approval`, `/approval/approve`, `/approval/decline`), and the payment routes (`GET /payment`, `POST /payment/order`, `POST /payment/capture`).
-- **Not built yet:** `GET /api/requests`, the `/api/proposals` routes, `GET /seller/sales` and `GET /seller/negotiations`.
+- **Built:** `/api/me`, `/api/users/demo`, `/api/listings`, the buyer and seller dashboard routes (`/buyer/requests`, `/buyer/negotiations`, `/seller/listings`, `/seller/active-negotiation`), `/negotiations/:id` with `/messages` and `/outcome`, the approval routes (`/approval`, `/approval/approve`, `/approval/decline`), and the payment routes (`GET /payment`, `POST /payment/order`, `POST /payment/capture`),`GET /api/requests`, `GET /seller/sales` and `GET /seller/negotiations`.
+- **Not built yet:**  the `/api/proposals` routes.
 - **Not in `API.md`:** `POST /negotiations` (the buyer starts a negotiation directly, with no proposal) and `GET /payments/config`.
 
 **How `web/src/api/real.ts` handles the missing routes.** It is an adapter for the backend as it is today:
