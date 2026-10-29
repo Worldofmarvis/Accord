@@ -10,6 +10,7 @@ const lockWhere = () => ({
       status: 'AGREED',
       updatedAt: { gt: new Date(Date.now() - LOCK_MS) },
       payments: { none: { status: 'COMPLETED' } },
+      NOT: { approval: { is: { OR: [{ buyer: 'declined' }, { seller: 'declined' }] } } },
     },
   ],
 })

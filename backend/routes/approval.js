@@ -41,10 +41,7 @@ const answer = value => h(async (req, res) => {
     data: { [req.side]: value },
   })
   if (!count) return fail(res, 400, 'VALIDATION', 'You already answered')
-  if (value === 'declined') {
-    // Ends the deal and releases the seller lock.
-    await prisma.negotiation.update({ where: { id: n.id }, data: { status: 'CANCELLED' } })
-  }
+  
   await logEvent(n.id, `deal_${value}`, { side: req.side })
   res.json(shape(await getApproval(n.id), n))
 })

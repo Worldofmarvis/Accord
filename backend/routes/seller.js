@@ -6,7 +6,7 @@ import { lockOf } from '../lib/locks.js'
 import { lockedRequestIds } from '../lib/locks.js'
 import { sellerListing } from '../lib/shapes.js'
 import { parseListing } from '../lib/validation.js'
-
+import { STATUS_IN } from '../lib/negotiation.js'
 
 const router = Router()
 
@@ -90,7 +90,42 @@ router.get('/requests', as('SELLER'), only('SELLER'), h(async (req, res) => {
   })))
 }))
 
+// The seller's whole history, newest first. Never includes the buyer's target or max.
+router.get('/seller/negotiations', as('SELLER'), only('SELLER'), h(async (req, res) => {
+  const rows = await prisma.negotiation.findMany({
+    where: { listing: { sellerId: req.user.id } },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      buyer: true,
+      listing: true,
+      offers: { orderBy: [{ roundNumber: 'asc' }, { offeredBy: 'asc' }] },
+      approval: true,
+    },
+  })
 
+  const latest = (offers, by) => offers.filter(o => o.offeredBy === by).at(-1)?.proposedPrice ?? null
+  const dealOf = a =>
+    !a ? 'pending'
+    : a.buyer === 'declined' || a.seller === 'declined' ? 'declined'
+    : a.buyer === 'approved' && a.seller === 'approved' ? 'approved' : 'pending'
+
+  // Built field by field, so nothing private can slip in.
+  res.json(rows.map(n => {
+    const status = STATUS_IN[n.status]
+    return {
+      id: n.id,
+      service: n.listing.title,
+      buyerName: n.buyer.name,
+      status,
+      round: n.currentRound,
+      maxRounds: n.maxRounds,
+      buyerOffer: latest(n.offers, 'BUYER_AGENT'),
+      sellerOffer: latest(n.offers, 'SELLER_AGENT'),
+      agreedPrice: status === 'agreed' ? n.finalPrice : null,
+      deal: status === 'agreed' ? dealOf(n.approval) : null,
+    }
+  }))
+}))
 
 
 
