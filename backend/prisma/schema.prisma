@@ -17,6 +17,7 @@ enum ProposalStatus {
   PENDING
   ACCEPTED
   DECLINED
+  WITHDRAWN
 }
 
 enum NegotiationStatus {
@@ -92,6 +93,8 @@ model Proposal {
   requestId     String
   request       BuyerRequest   @relation(fields: [requestId], references: [id])
   status        ProposalStatus @default(PENDING)
+  sentBy        Role           @default(BUYER)
+  closedReason  String?
   negotiationId String?        @unique
   negotiation   Negotiation?   @relation(fields: [negotiationId], references: [id])
   createdAt     DateTime       @default(now())
@@ -161,4 +164,12 @@ model AuditEvent {
   createdAt     DateTime @default(now())
 
   negotiation Negotiation? @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+}
+
+model DealApproval {
+  id            String   @id @default(uuid())
+  negotiationId String   @unique
+  approvedBy    String?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
 }
