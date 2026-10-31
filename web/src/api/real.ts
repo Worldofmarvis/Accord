@@ -4,6 +4,7 @@ import { getUserId, setUserId } from './session'
 import type { Api } from './types'
 import type { BuyerRequest } from '../types/dashboard'
 import type { Listing, Negotiation } from '../types/marketplace'
+import type { BuyerRequest, SellerNegotiationRow } from '../types/dashboard'
 
 const enc = encodeURIComponent
 
@@ -144,11 +145,11 @@ export const realApi: Api = {
   updateSellerListing: (id, input) => request(`/seller/listings/${enc(id)}`, { method: 'PUT', body: input }),
   getSellerActiveNegotiation: () => request('/seller/active-negotiation'),
 
-  // No back end routes yet: empty history.
-  async listSellerSales() {
-    return []
-  },
-  async listSellerNegotiations() {
-    return []
-  },
+  
+async listSellerSales(){
+  return[]
+}
+async listSellerNegotiations() {
+  return[]
+},
 }
