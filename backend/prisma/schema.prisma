@@ -116,6 +116,7 @@ model Negotiation {
 
   listing     Listing      @relation(fields: [listingId], references: [id])
   proposal    Proposal?
+  approval    DealApproval?
   offers      Offer[]
   messages    Message[]
   payments    Payment[]
@@ -167,9 +168,12 @@ model AuditEvent {
 }
 
 model DealApproval {
-  id            String   @id @default(uuid())
-  negotiationId String   @unique
+  id            String      @id @default(uuid())
+  negotiationId String      @unique
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id])
+  buyer         String      @default("pending")
+  seller        String      @default("pending")
   approvedBy    String?
-  status        String   @default("PENDING")
-  createdAt     DateTime @default(now())
+  status        String      @default("PENDING")
+  createdAt     DateTime    @default(now())
 }
