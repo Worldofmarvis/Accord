@@ -7,6 +7,7 @@ import sellerRoutes from './routes/seller.js'
 import negotiationRoutes from './routes/negotiations.js'
 import paymentRoutes from './routes/payments.js'
 import approvalRoutes from './routes/approval.js'
+import proposalRoutes from './routes/proposals.js'
 
 const app = express()
 app.set('trust proxy', 1)   // behind Render's proxy, so limits count each visitor's own address
@@ -62,7 +63,7 @@ app.use('/api', sellerRoutes)        // seller dashboard
 app.use('/api', negotiationRoutes)   // start, live view, outcome, chat
 app.use('/api', paymentRoutes)       // PayPal
 app.use('/api', approvalRoutes)      // approval
-
+app.use('/api', proposalRoutes)       // proposals
 // ---------- Errors ----------
 app.use('/api', (req, res) => fail(res, 404, 'NOT_FOUND', 'Unknown route'))
 app.use((err, req, res, next) => {

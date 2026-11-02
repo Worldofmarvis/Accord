@@ -16,9 +16,12 @@ const lockWhere = () => ({
 })
 
 // The negotiation that locks this seller, or null.
-export const lockOf = sellerId =>
-  prisma.negotiation.findFirst({ where: { listing: { sellerId }, ...lockWhere() } })
+export const lockOf = (sellerId, db = prisma) =>
+  db.negotiation.findFirst({ where: { listing: { sellerId }, ...lockWhere() } })
 
+// The negotiation that locks this request, or null.
+export const requestLockOf = (requestId, db = prisma) =>
+  db.negotiation.findFirst({ where: { proposal: { requestId }, ...lockWhere() } })
 // The ids of all sellers that are locked right now.
 export async function lockedSellerIds() {
   const rows = await prisma.negotiation.findMany({
