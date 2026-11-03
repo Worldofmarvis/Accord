@@ -5,12 +5,14 @@ const prisma = new PrismaClient();
 async function resetDemoData() {
   console.log('Resetting demo database...');
 
-  // Delete dependent records first to preserve foreign key constraints
   await prisma.auditEvent.deleteMany({});
   await prisma.payment.deleteMany({});
   await prisma.message.deleteMany({});
   await prisma.offer.deleteMany({});
+  await prisma.dealApproval.deleteMany({});
+  await prisma.proposal.deleteMany({});     
   await prisma.negotiation.deleteMany({});
+  await prisma.buyerRequest.deleteMany({}); 
   await prisma.listing.deleteMany({});
   await prisma.user.deleteMany({});
 

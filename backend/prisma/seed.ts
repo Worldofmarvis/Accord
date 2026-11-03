@@ -5,25 +5,31 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // 1. Create or fetch sample seller
+ 
   const seller = await prisma.user.upsert({
     where: { email: 'seller@example.com' },
-    update: {},
+    update: {
+      roles: [Role.SELLER],
+    },
     create: {
       email: 'seller@example.com',
       name: 'Alice Seller',
       role: Role.SELLER,
+      roles: [Role.SELLER],
     },
   });
 
-  // 2. Create or fetch sample buyer
+  
   const buyer = await prisma.user.upsert({
     where: { email: 'buyer@example.com' },
-    update: {},
+    update: {
+      roles: [Role.BUYER],
+    },
     create: {
       email: 'buyer@example.com',
       name: 'Bob Buyer',
       role: Role.BUYER,
+      roles: [Role.BUYER],
     },
   });
 
