@@ -1,11 +1,9 @@
-import Placeholder from '../components/Placeholder'
+import { useRole } from '../role/useRole'
+import ListingSearch from './ListingSearch'
+import RequestSearch from './RequestSearch'
 
+// Search goes both ways: a buyer looks for seller listings, a seller looks for what buyers need.
 export default function Search() {
-  return (
-    <Placeholder
-      title="Search services"
-      description="Search listings by keyword, category and price, then start a negotiation."
-      day="Day 2 (Mon Oct 12)"
-    />
-  )
+  const { role } = useRole()
+  return role === 'buyer' ? <ListingSearch /> : <RequestSearch />
 }
