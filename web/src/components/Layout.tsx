@@ -1,10 +1,21 @@
+import type { ReactNode } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { useIncomingProposals } from '../hooks/useIncomingProposals'
 import { useRole } from '../role/useRole'
 import type { Role } from '../types/me'
 import AccordMark from './AccordMark'
+import { SearchIcon } from './icons'
+import { BarsIcon, ChevronDownIcon, GridIcon, MailIcon, UserIcon } from './sellerArt'
 
 const sideLabel: Record<Role, string> = { buyer: 'Buyer', seller: 'Seller' }
+
+// Small icons in front of the menu names. Only the seller's header shows them.
+const sellerIcons: Record<string, ReactNode> = {
+  '/search': <SearchIcon size={20} />,
+  '/seller': <GridIcon size={20} />,
+  '/seller/history': <BarsIcon size={20} />,
+  '/proposals': <MailIcon size={20} />,
+}
 
 export default function Layout() {
   const { me, role } = useRole()
@@ -15,6 +26,9 @@ export default function Layout() {
   // no menu, just the logo and one clear way back, so nobody leaves halfway by accident.
   const focused = pathname.startsWith('/negotiations/')
   const dashboard = role === 'buyer' ? '/buyer' : '/seller'
+  const seller = role === 'seller'
+  // The seller dashboard fills the whole width (side menu and background included).
+  const bleed = seller && pathname === '/seller'
 
   // Each side has its own menu: a buyer finds services, a seller finds customers.
   // The side was chosen on the first screen and stays the same for this tab.
@@ -34,10 +48,10 @@ export default function Layout() {
 
   return (
     <div className="shell">
-      <header className={`shell-header${focused ? ' shell-header-focus' : ''}`}>
+      <header className={`shell-header${focused ? ' shell-header-focus' : ''}${seller ? ' shell-header-seller' : ''}`}>
         <div className="brand-group">
           <Link to="/" className="brand brand-mark" aria-label="Accord home">
-            <AccordMark size={26} onDark />
+            <AccordMark size={seller ? 46 : 26} onDark />
             Accord
           </Link>
           <span className={`role-pill role-pill-${role}`}>{sideLabel[role]}</span>
@@ -51,6 +65,7 @@ export default function Layout() {
               end
               aria-label={l.count ? `${l.label}, ${l.count} waiting for your answer` : undefined}
             >
+              {seller && sellerIcons[l.to]}
               {l.label}
               {l.count ? (
                 <span className="nav-count" aria-hidden="true">
@@ -71,10 +86,21 @@ export default function Layout() {
               Back to dashboard
             </Link>
           )}
-          <span className="role-name">{me.name}</span>
+          {seller ? (
+            // Looks like an account menu, but it is not one: plain text, nothing to click.
+            <span className="user-chip">
+              <span className="user-avatar" aria-hidden="true">
+                <UserIcon size={26} />
+              </span>
+              <span className="role-name">{me.name}</span>
+              <ChevronDownIcon size={16} />
+            </span>
+          ) : (
+            <span className="role-name">{me.name}</span>
+          )}
         </div>
       </header>
-      <main className="shell-main">
+      <main className={`shell-main${bleed ? ' shell-main-bleed' : ''}`}>
         {/* A new key on each address replays the short fade-in, so changing screens feels smooth. */}
         <div key={pathname} className="page-enter">
           <Outlet />
