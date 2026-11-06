@@ -53,7 +53,8 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  min-height: 100svh;
+  /* Exactly one screen tall: sizes below follow the window height, so nothing needs scrolling. */
+  height: 100svh;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #f7faff 0%, #e4effe 55%, #d2e3fc 100%);
@@ -62,10 +63,11 @@
 
 .role-choose-inner {
   flex: 1;
+  min-height: 0;
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
-  padding: var(--space-7) var(--page-gutter) var(--space-6);
+  padding: clamp(0.5rem, 2.5vh, 2rem) var(--page-gutter) clamp(0.5rem, 2vh, 1.5rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -74,12 +76,13 @@
 }
 .role-choose-brand {
   display: inline-flex; align-items: center; gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  font-size: 2.5rem; font-weight: var(--weight-semibold); letter-spacing: -0.02em; color: var(--rc-ink);
+  margin-bottom: clamp(0.25rem, 1vh, 1rem);
+  font-size: clamp(1.75rem, 4.2vh, 2.5rem); font-weight: var(--weight-semibold); letter-spacing: -0.02em; color: var(--rc-ink);
 }
+.role-choose-brand svg { width: auto; height: clamp(26px, 5vh, 40px); }
 .role-choose-inner h1 {
-  margin: 0 0 var(--space-4);
-  font-size: clamp(2.5rem, 6vw, 4.25rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em;
+  margin: 0 0 clamp(0.25rem, 1.5vh, 1rem);
+  font-size: clamp(2rem, min(6vw, 7.5vh), 4.25rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em;
   color: var(--rc-ink);
 }
 .welcome-word { position: relative; display: inline-block; }
@@ -87,10 +90,10 @@
   content: ''; position: absolute; left: 14%; right: 0; bottom: -0.12em; height: 0.2em;
   border-bottom: 4px solid #2f8dff; border-radius: 0 0 50% 50% / 0 0 100% 100%;
 }
-.role-choose-lead { margin: 0 auto var(--space-7); max-width: 40ch; font-size: 1.25rem; font-weight: var(--weight-medium); color: #2c3f78; }
+.role-choose-lead { margin: 0 auto clamp(0.75rem, 3.5vh, 3rem); max-width: 44rem; font-size: clamp(1rem, 2.3vh, 1.25rem); font-weight: var(--weight-medium); color: #2c3f78; }
 
 /* Two cards: a light one for the buyer, a deep blue one for the seller, with a swap mark between them. */
-.role-split { position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; text-align: center; }
+.role-split { position: relative; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 4vw, 56px); text-align: center; }
 .role-split-swap {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
   display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%;
@@ -101,7 +104,7 @@
 .role-card {
   position: relative;
   display: flex; flex-direction: column; align-items: center;
-  padding: 2.25rem 2rem 2rem;
+  padding: clamp(1rem, 3vh, 2.25rem) 2rem clamp(1rem, 2.5vh, 2rem);
   border-radius: 28px;
   transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
@@ -120,32 +123,32 @@
 }
 
 .role-card-icon {
-  position: relative; display: grid; place-items: center; width: 88px; height: 88px; margin-bottom: var(--space-3);
+  position: relative; display: grid; place-items: center; width: clamp(56px, 9vh, 88px); height: clamp(56px, 9vh, 88px); margin-bottom: clamp(0.25rem, 1vh, 0.75rem);
   border-radius: 50%;
 }
-.role-card-icon > svg { width: 44px; height: 44px; }
+.role-card-icon > svg { width: 50%; height: 50%; }
 .role-card-buyer .role-card-icon { background: rgba(40, 130, 255, 0.14); color: var(--rc-blue); }
 .role-card-seller .role-card-icon { background: rgba(0, 25, 150, 0.45); color: #fff; }
 .role-card-badge {
   position: absolute; right: -8px; bottom: -2px; display: grid; place-items: center;
-  width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.9); color: #fff;
+  width: clamp(26px, 4.2vh, 36px); height: clamp(26px, 4.2vh, 36px); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.9); color: #fff;
 }
-.role-card-badge svg { width: 18px; height: 18px; }
+.role-card-badge svg { width: 50%; height: 50%; }
 .role-card-buyer .role-card-badge { background: var(--rc-blue); }
 .role-card-seller .role-card-badge { background: #2f8dff; }
 
-.role-card h2 { margin: 0 0 var(--space-1); font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+.role-card h2 { margin: 0 0 var(--space-1); font-size: clamp(1.5rem, 3.8vh, 2rem); font-weight: 800; letter-spacing: -0.02em; }
 .role-card-buyer h2 { color: var(--rc-ink); }
 .role-card-seller h2 { color: #fff; }
 .role-card-tagline {
-  width: 100%; margin: 0 0 var(--space-4); padding-bottom: var(--space-4);
-  font-size: 1.125rem; border-bottom: 1px solid rgba(10, 58, 192, 0.16);
+  width: 100%; margin: 0 0 clamp(0.5rem, 1.6vh, 1rem); padding-bottom: clamp(0.5rem, 1.6vh, 1rem);
+  font-size: clamp(1rem, 2.2vh, 1.125rem); border-bottom: 1px solid rgba(10, 58, 192, 0.16);
 }
 .role-card-buyer .role-card-tagline { color: #3b4c85; }
 .role-card-seller .role-card-tagline { color: rgba(255, 255, 255, 0.88); border-bottom-color: rgba(255, 255, 255, 0.28); }
 
-.role-card ul { width: 100%; margin: 0 0 var(--space-5); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); flex: 1; text-align: left; }
-.role-card li { position: relative; padding-left: 2.1rem; font-size: 1.0625rem; font-weight: var(--weight-medium); line-height: 1.4; }
+.role-card ul { width: 100%; margin: 0 0 clamp(0.75rem, 2.6vh, 1.5rem); padding: 0; list-style: none; display: flex; flex-direction: column; gap: clamp(0.4rem, 1.3vh, 0.75rem); flex: 1; text-align: left; }
+.role-card li { position: relative; padding-left: 2.1rem; font-size: clamp(0.95rem, 2.1vh, 1.0625rem); font-weight: var(--weight-medium); line-height: 1.4; }
 .role-card li::after {
   content: ''; position: absolute; left: 0.42rem; top: 0.3em; width: 0.62rem; height: 0.34rem;
   border-left: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(-45deg);
@@ -156,7 +159,7 @@
 }
 .role-card-buyer li::after { left: 0.1rem; color: var(--rc-blue); }
 
-.role-card-btn { min-width: 15rem; min-height: 3.5rem; padding: 0 var(--space-6); gap: var(--space-3); font-size: 1.125rem; }
+.role-card-btn { min-width: 15rem; min-height: clamp(2.75rem, 6vh, 3.5rem); padding: 0 var(--space-6); gap: var(--space-3); font-size: 1.125rem; }
 .role-card-btn svg { width: 20px; height: 20px; }
 .role-card-buyer .role-card-btn { background: linear-gradient(180deg, var(--rc-blue), var(--rc-blue-deep)); color: #fff; box-shadow: 0 8px 18px rgba(0, 51, 201, 0.3); }
 .role-card-seller .role-card-btn { background: #fff; color: var(--rc-text-blue); box-shadow: 0 8px 18px rgba(0, 20, 100, 0.25); }
@@ -174,9 +177,9 @@
 .role-card-seller:focus-within { outline-color: #fff; }
 
 /* The strip along the bottom of the screen. */
-.role-features-bar { background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.9); }
+.role-features-bar { flex: none; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.9); }
 .role-features {
-  max-width: 1100px; margin: 0 auto; padding: var(--space-5) var(--page-gutter); list-style: none;
+  max-width: 1100px; margin: 0 auto; padding: clamp(0.5rem, 1.8vh, 1.5rem) var(--page-gutter); list-style: none;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .role-features li { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); text-align: left; font-size: var(--text-sm); color: #3b4c85; }
@@ -185,6 +188,10 @@
 .role-feature-icon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--rc-blue); }
 .role-feature-icon svg { width: 30px; height: 30px; }
 
+/* Stacked cards (phones) or a very short window: here a scroll is the only way to fit everything. */
+@media (max-width: 800px), (max-height: 560px) {
+  .role-choose { height: auto; min-height: 100svh; overflow: visible; }
+}
 @media (max-width: 800px) {
   .role-split { grid-template-columns: 1fr; gap: 44px; }
   .role-split-swap svg { transform: rotate(90deg); }

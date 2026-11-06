@@ -7,7 +7,6 @@ import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
 import {
   ArrowRightIcon,
-  ChartUpIcon,
   ChatBubbleIcon,
   CheckCircleIcon,
   ChevronDownIcon,
@@ -161,11 +160,6 @@ export default function SellerDashboard() {
             <p className="sd-subtitle">Manage your listings. Track negotiations and grow your business.</p>
             <span className="sd-title-bar" aria-hidden="true" />
           </div>
-          <Link to="/seller/history" className="sd-history-btn">
-            <ChartUpIcon size={20} />
-            View Sales History
-            <ArrowRightIcon size={15} />
-          </Link>
           <StoreArt />
         </div>
 

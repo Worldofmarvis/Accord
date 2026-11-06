@@ -198,24 +198,6 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
 .sd-subtitle { max-width: 52ch; margin: 0 0 12px; font-size: 1.25rem; color: #1b2a4a; }
 .sd-title-bar { display: block; width: 76px; height: 5px; border-radius: 5px; background: #1a63ee; }
 
-.sd-history-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex: none;
-  margin-top: 14px;
-  height: 48px;
-  padding: 0 24px;
-  border: 1.5px solid #5aa0f5;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.85);
-  color: #0a3aa8;
-  font-size: 0.95rem;
-  font-weight: var(--weight-bold);
-  text-decoration: none;
-  box-shadow: 0 6px 16px rgba(20, 90, 220, 0.12);
-}
-.sd-history-btn:hover { background: #fff; color: #0a3aa8; border-color: #1a63ee; }
 .sd-store-art { position: absolute; right: -44px; top: -40px; width: 330px; height: auto; pointer-events: none; }
 
 .sd-notice {
@@ -441,7 +423,6 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
   .sd-side { display: none; }
   .sd-content { padding: 24px 18px 56px; }
   .sd-hero { flex-direction: column; gap: 4px; }
-  .sd-history-btn { margin-top: 8px; }
 }
 @media (max-width: 640px) {
   .sd-panel-head { flex-wrap: wrap; padding: 18px 18px 12px; }

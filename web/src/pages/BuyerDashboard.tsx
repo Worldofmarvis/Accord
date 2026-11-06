@@ -4,7 +4,7 @@ import { api, errorMessage } from '../api'
 import Badge from '../components/Badge'
 import IconField from '../components/IconField'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
-import { LockIcon, SearchIcon } from '../components/icons'
+import { LockIcon } from '../components/icons'
 import {
   ArrowRightIcon,
   BagArt,
@@ -114,11 +114,6 @@ export default function BuyerDashboard() {
           <p className="sd-subtitle">Set your target and maximum price, then let your agent negotiate in up to 3 rounds.</p>
           <span className="sd-title-bar" aria-hidden="true" />
         </div>
-        <Link to="/search" className="sd-history-btn">
-          <SearchIcon size={20} />
-          Find services
-          <ArrowRightIcon size={15} />
-        </Link>
         <BagArt />
       </div>
 
