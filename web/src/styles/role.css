@@ -45,43 +45,131 @@
 .role-pill-seller { color: var(--color-seller); }
 
 /* ---------- First screen: choose buyer or seller ---------- */
+/* One panel split into two halves. The Accord mark sits on the seam where the two sides meet. */
 .role-choose {
   min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6) var(--page-gutter);
+  padding: var(--space-7) var(--page-gutter);
 }
-.role-choose-inner { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: var(--space-4); text-align: center; }
-.role-choose-inner h1 { margin: 0; }
-.role-choose-brand { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-primary); }
-.role-choose-lead { margin: 0 auto; max-width: 52ch; }
+.role-choose-inner { width: 100%; max-width: 920px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.role-choose-brand {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: -0.03em; color: var(--color-text);
+}
+.role-choose-inner h1 { margin: 0 0 var(--space-2); font-size: var(--text-3xl); letter-spacing: -0.02em; }
+.role-choose-lead { margin: 0 auto var(--space-7); max-width: 46ch; font-size: var(--text-lg); }
 
-.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin: var(--space-3) 0; text-align: left; }
+.role-split {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  text-align: left;
+}
+.role-split-mark {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: grid; place-items: center;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 6px var(--color-bg);
+  pointer-events: none;
+}
 
 .role-card {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border: 1px solid var(--color-border);
-  border-top: 6px solid var(--color-buyer);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-7) var(--space-7) var(--space-6);
 }
-.role-card-seller { border-top-color: var(--color-seller); }
-.role-card h2 { margin: 0; }
-.role-card-tagline { margin: 0; color: var(--color-text-muted); }
-.role-card ul { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
-.role-card .btn { align-self: flex-start; }
-.role-card.is-unavailable { opacity: 0.65; }
+.role-card-buyer { background: var(--color-surface); color: var(--color-text); }
+.role-card-seller { background: var(--color-seller); color: var(--color-primary-contrast); }
+.role-card h2 { margin: 0; font-size: var(--text-2xl); color: inherit; }
+.role-card-tagline { margin: 0; font-size: var(--text-lg); color: var(--color-text-muted); }
+.role-card-seller .role-card-tagline { color: rgba(255, 255, 255, 0.78); }
 
-/* The whole card is clickable, but only the button is a real control (keyboard and screen readers). */
-.role-card:not(.is-unavailable) .btn::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-lg); }
-.role-card:not(.is-unavailable):hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-md); }
-.role-card:focus-within { outline: var(--focus-ring); outline-offset: 2px; }
+.role-card-icon {
+  display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+}
+.role-card-icon svg { width: 24px; height: 24px; }
+.role-card-buyer .role-card-icon { background: var(--color-buyer-soft); color: var(--color-buyer); }
+.role-card-seller .role-card-icon { background: rgba(255, 255, 255, 0.14); color: var(--color-primary-contrast); }
+
+.role-card ul { margin: var(--space-3) 0 var(--space-5); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); flex: 1; }
+.role-card li { position: relative; padding-left: 1.75rem; }
+.role-card li::before {
+  content: ''; position: absolute; left: 0; top: 0.3em; width: 0.9rem; height: 0.5rem;
+  border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg);
+}
+.role-card-buyer li::before { color: var(--color-buyer); }
+.role-card-seller li::before { color: rgba(255, 255, 255, 0.9); }
+
+.role-card-btn { align-self: flex-start; }
+.role-card-buyer .role-card-btn { background: var(--color-primary); color: var(--color-primary-contrast); }
+.role-card-buyer .role-card-btn:hover { background: var(--color-primary-hover); }
+.role-card-seller .role-card-btn { background: var(--color-surface); color: var(--color-primary); }
+.role-card-seller .role-card-btn:hover { background: var(--color-accent-soft); }
+.role-card .btn:disabled { background: var(--color-surface-muted); color: var(--color-text-subtle); }
+.role-card-note { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+.role-card-seller .role-card-note { color: rgba(255, 255, 255, 0.78); }
+.role-card.is-unavailable { opacity: 0.7; }
+
+/* The whole half is clickable, but only the button is a real control (keyboard and screen readers). */
+.role-card:not(.is-unavailable) .btn::after { content: ''; position: absolute; inset: 0; }
+.role-card:not(.is-unavailable) { cursor: pointer; transition: filter var(--transition-base); }
+.role-card-buyer:not(.is-unavailable):hover { background: var(--color-buyer-soft); }
+.role-card-seller:not(.is-unavailable):hover { filter: brightness(1.12); }
+.role-card:focus-within { outline: var(--focus-ring); outline-offset: -4px; }
+.role-card-seller:focus-within { outline-color: var(--color-primary-contrast); }
+
+.role-assurances {
+  list-style: none; margin: var(--space-6) 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3) var(--space-6);
+  font-size: var(--text-sm); color: var(--color-text-muted);
+}
+.role-assurances li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.role-assurances svg { width: 18px; height: 18px; flex: none; color: var(--color-primary); }
 
 @media (max-width: 720px) {
-  .role-cards { grid-template-columns: 1fr; }
+  .role-split { grid-template-columns: 1fr; }
+  .role-card { padding: var(--space-6) var(--space-5); }
+  .role-choose-inner h1 { font-size: var(--text-2xl); }
+  .role-split-mark { width: 60px; height: 60px; }
+}
+
+.brand-mark { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* ---------- Task pages: focused header with one clear way back ---------- */
+.shell-header-focus {
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "brand user";
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-4) 6px var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-contrast);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.back-link:hover {
+  background: var(--color-brand-header-active);
+  border-color: var(--color-primary-contrast);
+  color: var(--color-primary-contrast);
+}
+.back-link svg { width: 16px; height: 16px; transition: transform var(--transition-fast); }
+.back-link:hover svg { transform: translateX(-3px); }
+@media (prefers-reduced-motion: reduce) {
+  .back-link svg { transition: none; }
+  .back-link:hover svg { transform: none; }
 }
