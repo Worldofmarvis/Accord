@@ -4,7 +4,6 @@ import { api, errorMessage, POLL_MS } from '../api'
 import Badge from '../components/Badge'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
-import SellerSidebar from '../components/SellerSidebar'
 import {
   ArrowRightIcon,
   ChartUpIcon,
@@ -152,10 +151,7 @@ export default function SellerDashboard() {
     ) : null
 
   return (
-    <div className="sd-shell">
-      <SellerSidebar />
-
-      <div className="sd-content">
+    <div className="sd-content">
         <div className="sd-hero">
           <div className="sd-hero-text">
             <h1 className="sd-title">
@@ -372,7 +368,6 @@ export default function SellerDashboard() {
             </section>
           </div>
         </div>
-      </div>
     </div>
   )
 }

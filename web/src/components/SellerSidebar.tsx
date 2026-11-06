@@ -1,13 +1,14 @@
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BarsIcon, GearIcon, HandshakeIcon, HomeIcon, PayPalMark, ShieldCheckArt, TagIcon } from './sellerArt'
+import { SearchIcon } from './icons'
+import { BarsIcon, GearIcon, HandshakeIcon, HomeIcon, MailIcon, PayPalMark, ShieldCheckArt, TagIcon } from './sellerArt'
 
 /**
- * Side menu of the seller dashboard.
- * Dashboard and Sales History are real links. The other items are for looks only:
- * they are plain text (not links or buttons), so they cannot be clicked or tabbed to.
+ * Side menu of the seller pages. It replaces the links in the header.
+ * Dashboard, Find customers, Sales History and Proposals go to real pages.
+ * My Listings, Negotiations and Settings look and feel like links (hover, pointer) but do nothing when clicked.
  */
-export default function SellerSidebar() {
+export default function SellerSidebar({ incoming = 0 }: { incoming?: number }) {
   return (
     <aside className="sd-side" aria-label="Seller menu">
       <nav className="sd-side-nav" aria-label="Seller sections">
@@ -15,13 +16,30 @@ export default function SellerSidebar() {
           <HomeIcon size={24} />
           Dashboard
         </NavLink>
-        <Static icon={<TagIcon size={24} />}>My Listings</Static>
-        <Static icon={<HandshakeIcon size={24} />}>Negotiations</Static>
+        <NavLink to="/search" className="sd-side-item">
+          <SearchIcon size={24} />
+          Find customers
+        </NavLink>
+        <LookOnlyLink icon={<TagIcon size={24} />}>My Listings</LookOnlyLink>
+        <LookOnlyLink icon={<HandshakeIcon size={24} />}>Negotiations</LookOnlyLink>
         <NavLink to="/seller/history" className="sd-side-item">
           <BarsIcon size={24} />
           Sales History
         </NavLink>
-        <Static icon={<GearIcon size={24} />}>Settings</Static>
+        <NavLink
+          to="/proposals"
+          className="sd-side-item"
+          aria-label={incoming ? `Proposals, ${incoming} waiting for your answer` : undefined}
+        >
+          <MailIcon size={24} />
+          Proposals
+          {incoming ? (
+            <span className="sd-side-count" aria-hidden="true">
+              {incoming > 9 ? '9+' : incoming}
+            </span>
+          ) : null}
+        </NavLink>
+        <LookOnlyLink icon={<GearIcon size={24} />}>Settings</LookOnlyLink>
       </nav>
 
       <div className="sd-confidence">
@@ -34,12 +52,12 @@ export default function SellerSidebar() {
   )
 }
 
-/** A menu item that only looks like the others: no link, no button, no focus. */
-function Static({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+/** Looks like a menu link, but clicking it does nothing yet (the page behind it is not built). */
+function LookOnlyLink({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="sd-side-item sd-side-static">
+    <a href="#" className="sd-side-item" aria-disabled="true" onClick={(e: MouseEvent<HTMLAnchorElement>) => e.preventDefault()}>
       {icon}
       {children}
-    </span>
+    </a>
   )
 }

@@ -26,6 +26,8 @@
 }
 
 .shell-header-seller .shell-nav { gap: 6px; align-items: center; }
+/* The side bar carries the menu on wide screens. The header menu only appears when the side bar is hidden. */
+.shell-header-seller .shell-nav-compact { display: none; }
 .shell-header-seller .shell-nav a {
   position: relative;
   display: inline-flex;
@@ -66,6 +68,7 @@
 .shell-header-seller .role-name { font-size: 1rem; font-weight: var(--weight-medium); }
 
 @media (max-width: 900px) {
+  .shell-header-seller .shell-nav-compact { display: flex; }
   .shell-header-seller { padding: 8px 16px; }
   .shell-header-seller .brand { font-size: 1.6rem; }
   .shell-header-seller .shell-nav a { height: 40px; padding: 0 16px; }
@@ -78,8 +81,9 @@
 /* =========================================================
    Seller dashboard
    ========================================================= */
-.sd-shell {
+.sd-frame {
   position: relative;
+  flex: 1;
   isolation: isolate;
   overflow: hidden;
   display: grid;
@@ -91,7 +95,7 @@
   color: #0b1736;
 }
 /* Soft blue waves along the bottom edge. */
-.sd-shell::after {
+.sd-frame::after {
   content: '';
   position: absolute;
   inset: auto 0 0 0;
@@ -115,12 +119,12 @@
   border-right: 1px solid rgba(20, 70, 180, 0.08);
   backdrop-filter: blur(6px);
 }
-.sd-side-nav { display: flex; flex-direction: column; gap: 8px; }
+.sd-side-nav { display: flex; flex-direction: column; gap: 6px; }
 .sd-side-item {
   display: flex;
   align-items: center;
   gap: 18px;
-  height: 58px;
+  height: 54px;
   padding: 0 22px;
   border-radius: var(--radius-pill);
   color: #10286b;
@@ -136,7 +140,22 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
   box-shadow: 0 8px 18px rgba(10, 76, 201, 0.3);
 }
 .sd-side-item.active:hover { background: linear-gradient(180deg, #1a63ee, #0b4cc9); color: #fff; }
-.sd-side-static { cursor: default; user-select: none; }
+.sd-frame > .shell-main { min-width: 0; }
+
+/* Number of proposals waiting, on the Proposals link. */
+.sd-side-count {
+  margin-left: auto;
+  min-width: 1.6rem;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: #1a63ee;
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: 1.6rem;
+  text-align: center;
+}
+.sd-side-item.active .sd-side-count { background: #fff; color: #0b4cc9; }
 
 .sd-confidence {
   margin-top: auto;
@@ -415,7 +434,7 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
   .sd-store-art { display: none; }
 }
 @media (max-width: 900px) {
-  .sd-shell { grid-template-columns: minmax(0, 1fr); }
+  .sd-frame { grid-template-columns: minmax(0, 1fr); }
   .sd-side { display: none; }
   .sd-content { padding: 24px 18px 56px; }
   .sd-hero { flex-direction: column; gap: 4px; }

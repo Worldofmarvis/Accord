@@ -4,6 +4,7 @@ import { useIncomingProposals } from '../hooks/useIncomingProposals'
 import { useRole } from '../role/useRole'
 import type { Role } from '../types/me'
 import AccordMark from './AccordMark'
+import SellerSidebar from './SellerSidebar'
 import { SearchIcon } from './icons'
 import { BarsIcon, ChevronDownIcon, GridIcon, MailIcon, UserIcon } from './sellerArt'
 
@@ -29,6 +30,8 @@ export default function Layout() {
   const seller = role === 'seller'
   // The seller dashboard fills the whole width (side menu and background included).
   const bleed = seller && pathname === '/seller'
+  // The seller's menu lives in a side bar on every normal seller page. Task pages keep their focused header.
+  const framed = seller && !focused
 
   // Each side has its own menu: a buyer finds services, a seller finds customers.
   // The side was chosen on the first screen and stays the same for this tab.
@@ -46,6 +49,15 @@ export default function Layout() {
           { to: '/proposals', label: 'Proposals', count: incoming },
         ]
 
+  const content = (
+    <main className={`shell-main${bleed ? ' shell-main-bleed' : ''}`}>
+      {/* A new key on each address replays the short fade-in, so changing screens feels smooth. */}
+      <div key={pathname} className="page-enter">
+        <Outlet />
+      </div>
+    </main>
+  )
+
   return (
     <div className="shell">
       <header className={`shell-header${focused ? ' shell-header-focus' : ''}${seller ? ' shell-header-seller' : ''}`}>
@@ -57,7 +69,7 @@ export default function Layout() {
           <span className={`role-pill role-pill-${role}`}>{sideLabel[role]}</span>
         </div>
         {!focused && (
-        <nav className="shell-nav" aria-label="Main">
+        <nav className={`shell-nav${seller ? ' shell-nav-compact' : ''}`} aria-label="Main">
           {links.map((l) => (
             <NavLink
               key={l.to}
@@ -100,12 +112,14 @@ export default function Layout() {
           )}
         </div>
       </header>
-      <main className={`shell-main${bleed ? ' shell-main-bleed' : ''}`}>
-        {/* A new key on each address replays the short fade-in, so changing screens feels smooth. */}
-        <div key={pathname} className="page-enter">
-          <Outlet />
+      {framed ? (
+        <div className="sd-frame">
+          <SellerSidebar incoming={incoming} />
+          {content}
         </div>
-      </main>
+      ) : (
+        content
+      )}
     </div>
   )
 }
