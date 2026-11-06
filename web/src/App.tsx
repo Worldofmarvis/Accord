@@ -18,6 +18,7 @@ import './styles/states.css'
 import './styles/role.css'
 import './styles/cards.css'
 import './styles/history.css'
+import './styles/seller.css'
 
 export default function App() {
   return (
