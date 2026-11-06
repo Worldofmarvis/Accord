@@ -128,7 +128,7 @@ export default function SellerDashboard() {
     ) : null
 
   return (
-    <div className="page-stack">
+    <div className="page-stack seller-dashboard">
       <div className="page-head">
         <div>
           <h1>Seller dashboard</h1>
