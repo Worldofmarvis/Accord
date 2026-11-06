@@ -1,13 +1,17 @@
 import { useMemo, type ReactNode } from 'react'
 import type { AgPanelConfig } from 'ag-studio'
 import { AgStudio, AgStudioProvider } from 'ag-studio-react'
-import { appStudioTheme, STUDIO_LICENSE } from '../lib/studioTheme'
+import { chartStudioTheme, STUDIO_LICENSE } from '../lib/studioTheme'
 import { toStudioRows } from '../lib/sales'
 import type { SellerSale } from '../types/dashboard'
 
 // Loaded on demand by SalesHistory, so AG Studio is only downloaded when a seller opens their history.
 
+import { outcomeLabel } from '../lib/sales'
+import { useNarrow } from '../hooks/useNarrow'
+
 const SOURCE = 'sales'
+const STATUS_ORDER = [outcomeLabel.paid, outcomeLabel.awaiting_payment, outcomeLabel.awaiting_approval, outcomeLabel.declined, outcomeLabel.no_agreement]
 const col = (field: string) => `${SOURCE}.${field}`
 
 // The fields Studio shows: friendly names, and a format for each, from the AG Studio "Formatting" docs.
@@ -15,7 +19,7 @@ const col = (field: string) => `${SOURCE}.${field}`
 const MONEY = { format: '$#,##0' }
 const FIELDS = [
   { id: 'date', name: 'Date', format: 'dateFormat', formatOptions: { format: 'dd mmm yyyy' } },
-  { id: 'month', name: 'Month', format: 'textFormat' },
+  { id: 'month', name: 'Month', format: 'dateFormat', formatOptions: { format: 'mmm yyyy' } },
   { id: 'buyer', name: 'Buyer', format: 'textFormat' },
   { id: 'service', name: 'Service', format: 'textFormat' },
   { id: 'listPrice', name: 'List price', format: 'currencyFormat', formatOptions: MONEY },
@@ -33,33 +37,19 @@ const FIELDS = [
 // Layout, from the "Modes & Layout" docs: the page is a grid of 24 columns and rows 16px tall. With a fixed
 // height of (rows x row height) plus double the page padding, there is no stray space at the bottom.
 const ROW_HEIGHT = 16
-const PAGE_PADDING = 8
-const KPI_ROWS = 7
-const CHART_ROWS = 18
-const LEDGER_ROWS = 24
-const TOTAL_ROWS = KPI_ROWS + CHART_ROWS + LEDGER_ROWS
-const HEIGHT = TOTAL_ROWS * ROW_HEIGHT + 2 * PAGE_PADDING
+const PAGE_PADDING = 0
+const CHART_ROWS = 20
+const heightOf = (narrow: boolean) => (narrow ? 2 : 1) * CHART_ROWS * ROW_HEIGHT + 2 * PAGE_PADDING
 
 // The edit panels are for building reports and the Filters panel would only repeat the filter buttons
 // above the dashboard, so view mode shows the page alone. (Clicking a bar or a slice still filters.)
 const PANELS: AgPanelConfig = { view: { left: [], right: [] } }
 
-const kpi = (caption: string, field: string, aggregation: 'sum' | 'avg') => ({
-  type: 'value',
-  dataMapping: { value: [{ id: col(field), aggregation }] },
-  format: { caption: { enabled: true, text: caption } },
-})
-
-const STATE = {
+const buildState = (narrow: boolean) => ({
   pages: [
     {
       id: 'sales-history',
       widgets: {
-        // Only paid deals count in the first four tiles: their fields are empty for every other deal.
-        'kpi-revenue': kpi('Revenue earned', 'revenue', 'sum'),
-        'kpi-sales': kpi('Sales completed', 'sold', 'sum'),
-        'kpi-average': kpi('Average sale', 'revenue', 'avg'),
-        'kpi-discount': kpi('Average discount', 'soldDiscount', 'avg'),
         'revenue-by-month': {
           type: 'column-chart-grouped',
           dataMapping: {
@@ -70,67 +60,68 @@ const STATE = {
           format: { title: { enabled: true, text: 'Revenue by month' } },
         },
         'outcomes': {
-          type: 'pie-chart',
+          type: 'donut-chart',
           dataMapping: {
             categoryKey: [{ id: col('status') }],
             valueKey: [{ id: col('deals'), aggregation: 'sum' }],
           },
-          format: { title: { enabled: true, text: 'How deals ended' } },
-        },
-        ledger: {
-          type: 'grid',
-          dataMapping: {
-            cols: ['date', 'buyer', 'service', 'listPrice', 'finalPrice', 'discount', 'aboveFloor', 'rounds', 'status'].map(
-              (c) => ({ id: col(c) }),
-            ),
-          },
           format: {
-            title: { enabled: true, text: 'Sales ledger' },
-            style: { theme: { rowHeight: 34 } },
+            title: { enabled: true, text: 'How deals ended' },
+            style: { theme: { common: { legend: { enabled: true, position: 'right' } } } },
           },
         },
       },
       widgetLayout: {
-        'kpi-revenue': { xTrack: 0, yTrack: 0, xSpan: 6, ySpan: KPI_ROWS },
-        'kpi-sales': { xTrack: 6, yTrack: 0, xSpan: 6, ySpan: KPI_ROWS },
-        'kpi-average': { xTrack: 12, yTrack: 0, xSpan: 6, ySpan: KPI_ROWS },
-        'kpi-discount': { xTrack: 18, yTrack: 0, xSpan: 6, ySpan: KPI_ROWS },
-        'revenue-by-month': { xTrack: 0, yTrack: KPI_ROWS, xSpan: 15, ySpan: CHART_ROWS },
-        outcomes: { xTrack: 15, yTrack: KPI_ROWS, xSpan: 9, ySpan: CHART_ROWS },
-        ledger: { xTrack: 0, yTrack: KPI_ROWS + CHART_ROWS, xSpan: 24, ySpan: LEDGER_ROWS },
+        // Side by side, or one above the other on a phone.
+        'revenue-by-month': { xTrack: 0, yTrack: 0, xSpan: narrow ? 24 : 14, ySpan: CHART_ROWS },
+        outcomes: narrow
+          ? { xTrack: 0, yTrack: CHART_ROWS, xSpan: 24, ySpan: CHART_ROWS }
+          : { xTrack: 14, yTrack: 0, xSpan: 10, ySpan: CHART_ROWS },
       },
     },
   ],
   selectedPageId: 'sales-history',
-}
+})
 
 /**
- * The seller's sales history as an AG Studio dashboard: four totals, revenue by month, how deals ended,
- * and the full ledger. Clicking a bar or a slice filters the other widgets, and clicking it again clears it.
+ * The chart strip of the sales history, an AG Studio dashboard: revenue by month and how deals ended.
+ * (The totals are cards and the ledger is an AG Grid, both in their own components.)
  * It only shows the seller's own deals and their own price floor.
  */
 export default function SalesHistoryStudio({ sales }: { sales: SellerSale[] }) {
-  const rowsJson = JSON.stringify(toStudioRows(sales))
+  // Studio gives categories their colours in the order it first meets them, so list the deals by outcome:
+  // paid first. That keeps "Paid" green and "Declined" red, the same colours as the ledger's status pills.
+  const rowsJson = JSON.stringify(
+    toStudioRows(sales)
+      .map((row, i) => ({ row, i, rank: STATUS_ORDER.indexOf(row.status) }))
+      .sort((a, b) => a.rank - b.rank || a.i - b.i)
+      .map((x) => x.row),
+  )
 
   // Stable objects: Studio reads them again only when the deals really change.
   const data = useMemo(() => ({ sources: [{ id: SOURCE, name: 'Sales', data: JSON.parse(rowsJson), fields: FIELDS }] }), [rowsJson])
-  const layout = useMemo(() => ({ minWidth: 880, rowHeight: ROW_HEIGHT, pagePadding: PAGE_PADDING, height: HEIGHT }), [])
+  const narrow = useNarrow()
+  const height = heightOf(narrow)
+  const layout = useMemo(() => ({ minWidth: 240, rowHeight: ROW_HEIGHT, pagePadding: PAGE_PADDING, height }), [height])
+  // Studio reads `initialState` once, so the two layouts are two separate starts (see `key` below).
+  const initialState = useMemo(() => buildState(narrow), [narrow])
 
   // The state object follows the AG Studio docs; it is typed loosely here so the compiler does not reject a
   // valid shape. If Studio reports it as invalid, re-create it in edit mode and copy it with getState().
   const studio: ReactNode = (
     <AgStudio
+      key={narrow ? 'stacked' : 'side-by-side'}
       style={{ width: '100%', height: '100%' }}
       data={data as never}
-      initialState={STATE as never}
+      initialState={initialState as never}
       mode="view"
       panels={PANELS}
       layout={layout}
-      theme={appStudioTheme as never}
+      theme={chartStudioTheme as never}
     />
   )
   return (
-    <div className="sales-studio" style={{ height: HEIGHT }}>
+    <div className="sales-studio" style={{ height }}>
       {STUDIO_LICENSE ? <AgStudioProvider licenseKey={STUDIO_LICENSE}>{studio}</AgStudioProvider> : studio}
     </div>
   )
