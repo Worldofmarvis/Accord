@@ -296,3 +296,79 @@ export function ListingThumb() {
     </svg>
   )
 }
+
+export const CalendarIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.4" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </Svg>
+)
+
+export const TargetIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+  </Svg>
+)
+
+export const ClipboardIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="5" y="4.5" width="14" height="17" rx="2.4" />
+    <path d="M9 4.5V3.6c0-.6.5-1.1 1.1-1.1h3.8c.6 0 1.1.5 1.1 1.1v.9" />
+    <path d="M8.5 11h7M8.5 15h7" />
+  </Svg>
+)
+
+/** The shopping bag with a rising chart, for the buyer's page title area. */
+export function BagArt() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg viewBox="0 0 340 200" aria-hidden="true" focusable="false" className="sd-store-art">
+      <defs>
+        <linearGradient id={`${id}b`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#5aa9ff" />
+          <stop offset="1" stopColor="#1456e0" />
+        </linearGradient>
+        <linearGradient id={`${id}w`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2f7bff" />
+          <stop offset="1" stopColor="#0a3aa8" />
+        </linearGradient>
+      </defs>
+      <rect x="236" y="128" width="20" height="50" rx="3" fill={`url(#${id}b)`} opacity="0.85" />
+      <rect x="264" y="104" width="20" height="74" rx="3" fill={`url(#${id}b)`} opacity="0.9" />
+      <rect x="292" y="78" width="20" height="100" rx="3" fill={`url(#${id}b)`} />
+      <path d="M226 100 258 72l22 14 52-46" fill="none" stroke="#1456e0" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M312 36h26v26" fill="none" stroke="#1456e0" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      {/* bag */}
+      <path d="M92 70c0-26 14-42 44-42s44 16 44 42" fill="none" stroke="#0a2f94" strokeWidth="9" strokeLinecap="round" />
+      <path d="M62 66h148l12 112H50z" fill={`url(#${id}w)`} />
+      <path d="M62 66h148l3 28H59z" fill="#fff" opacity="0.16" />
+      <circle cx="136" cy="122" r="30" fill="#fff" />
+      <path d="m121 122 11 11 20-23" fill="none" stroke="#1456e0" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      <ellipse cx="136" cy="181" rx="110" ry="8" fill="#0a3aa8" opacity="0.18" />
+    </svg>
+  )
+}
+
+/** A stand-in picture for a request: a clipboard. Requests have no pictures. */
+export function RequestThumb() {
+  const id = useId().replace(/:/g, '')
+  return (
+    <svg viewBox="0 0 120 100" className="sd-thumb-art" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#e6f0ff" />
+          <stop offset="1" stopColor="#bcd5fb" />
+        </linearGradient>
+      </defs>
+      <rect width="120" height="100" fill={`url(#${id})`} />
+      <rect x="34" y="14" width="52" height="72" rx="7" fill="#1456e0" />
+      <rect x="40" y="22" width="40" height="58" rx="3" fill="#fff" />
+      <rect x="49" y="9" width="22" height="13" rx="4" fill="#0a3aa8" />
+      <path d="M46 36h28M46 46h28M46 56h18" stroke="#9db9e6" strokeWidth="3.5" strokeLinecap="round" />
+      <circle cx="74" cy="68" r="8" fill="#14a05a" />
+      <path d="m70.3 68 2.7 2.7 4.7-5.4" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

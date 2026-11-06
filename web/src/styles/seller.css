@@ -1,23 +1,23 @@
 /*
-  The seller look: a deeper blue header on every seller page, plus the side menu,
-  soft blue background and rounded cards of the seller dashboard.
-  Everything is scoped to .shell-header-seller and .sd-* so the buyer side is untouched.
+  The dashboard look, shared by the buyer and the seller: a deeper blue header on every page, plus the
+  side menu, soft blue background and rounded cards of the two dashboards.
+  Everything is scoped to .shell-header-styled and .sd-*.
   Imported last in App.tsx so it wins over the shared styles.
 */
 
 /* =========================================================
-   Header (all seller pages)
+   Header (all pages, both sides)
    ========================================================= */
-.shell-header-seller {
+.shell-header-styled {
   --color-brand-header: #0b2a86; /* the cut-out inside the Accord mark matches the header */
   min-height: 78px;
   padding: 0 32px;
   background: linear-gradient(90deg, #081f6e 0%, #0b2f94 55%, #0a3aa8 100%);
   box-shadow: 0 2px 12px rgba(0, 20, 80, 0.28);
 }
-.shell-header-seller .brand-group { gap: 18px; flex-wrap: nowrap; }
-.shell-header-seller .brand { gap: 12px; font-size: 2rem; font-weight: var(--weight-semibold); letter-spacing: -0.01em; }
-.shell-header-seller .role-pill {
+.shell-header-styled .brand-group { gap: 18px; flex-wrap: nowrap; }
+.shell-header-styled .brand { gap: 12px; font-size: 2rem; font-weight: var(--weight-semibold); letter-spacing: -0.01em; }
+.shell-header-styled .role-pill {
   padding: 6px 20px;
   font-size: 0.95rem;
   letter-spacing: 0.03em;
@@ -25,10 +25,10 @@
   box-shadow: 0 2px 8px rgba(0, 20, 80, 0.25);
 }
 
-.shell-header-seller .shell-nav { gap: 6px; align-items: center; }
+.shell-header-styled .shell-nav { gap: 6px; align-items: center; }
 /* The side bar carries the menu on wide screens. The header menu only appears when the side bar is hidden. */
-.shell-header-seller .shell-nav-compact { display: none; }
-.shell-header-seller .shell-nav a {
+.shell-header-styled .shell-nav-compact { display: none; }
+.shell-header-styled .shell-nav a {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -38,9 +38,9 @@
   font-size: 1rem;
   font-weight: var(--weight-medium);
 }
-.shell-header-seller .shell-nav a:hover { background: rgba(255, 255, 255, 0.1); }
-.shell-header-seller .shell-nav a.active { background: #1d3f9f; font-weight: var(--weight-semibold); }
-.shell-header-seller .shell-nav a.active::after {
+.shell-header-styled .shell-nav a:hover { background: rgba(255, 255, 255, 0.1); }
+.shell-header-styled .shell-nav a.active { background: #1d3f9f; font-weight: var(--weight-semibold); }
+.shell-header-styled .shell-nav a.active::after {
   content: '';
   position: absolute;
   left: 24px;
@@ -50,7 +50,7 @@
   border-radius: 3px;
   background: #5aa9ff;
 }
-.shell-header-seller .nav-count { min-width: 1.6rem; line-height: 1.6rem; margin-left: 2px; padding: 0 6px; font-size: var(--text-sm); }
+.shell-header-styled .nav-count { min-width: 1.6rem; line-height: 1.6rem; margin-left: 2px; padding: 0 6px; font-size: var(--text-sm); }
 
 /* Looks like an account menu, but it is plain text: nothing to click. */
 .user-chip { display: inline-flex; align-items: center; gap: 10px; cursor: default; user-select: none; }
@@ -65,21 +65,21 @@
   background: linear-gradient(170deg, #d6e7ff, #7fb2f5);
   color: #27498a;
 }
-.shell-header-seller .role-name { font-size: 1rem; font-weight: var(--weight-medium); }
+.shell-header-styled .role-name { font-size: 1rem; font-weight: var(--weight-medium); }
 
 @media (max-width: 900px) {
-  .shell-header-seller .shell-nav-compact { display: flex; }
-  .shell-header-seller { padding: 8px 16px; }
-  .shell-header-seller .brand { font-size: 1.6rem; }
-  .shell-header-seller .shell-nav a { height: 40px; padding: 0 16px; }
-  .shell-header-seller .shell-nav a.active::after { left: 16px; right: 16px; }
+  .shell-header-styled .shell-nav-compact { display: flex; }
+  .shell-header-styled { padding: 8px 16px; }
+  .shell-header-styled .brand { font-size: 1.6rem; }
+  .shell-header-styled .shell-nav a { height: 40px; padding: 0 16px; }
+  .shell-header-styled .shell-nav a.active::after { left: 16px; right: 16px; }
 }
 
 /* The dashboard uses the whole width: side menu and background run to the edges. */
 .shell-main-bleed { max-width: none; padding: 0; }
 
 /* =========================================================
-   Seller dashboard
+   Dashboards (seller and buyer)
    ========================================================= */
 .sd-frame {
   position: relative;
@@ -193,8 +193,9 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
   letter-spacing: -0.03em;
   color: #0b1736;
 }
+.sd-hero-text { flex: 1; min-width: 0; }
 .sd-title span { color: #0b4fd1; }
-.sd-subtitle { margin: 0 0 12px; font-size: 1.25rem; color: #1b2a4a; }
+.sd-subtitle { max-width: 52ch; margin: 0 0 12px; font-size: 1.25rem; color: #1b2a4a; }
 .sd-title-bar { display: block; width: 76px; height: 5px; border-radius: 5px; background: #1a63ee; }
 
 .sd-history-btn {
@@ -404,6 +405,8 @@ a.sd-side-item:hover { background: rgba(20, 86, 224, 0.09); color: #10286b; }
   padding: 16px 28px;
 }
 .sd-listing + .sd-listing { border-top: 1px solid #e7edf7; }
+.sd-listing-static { grid-template-columns: 114px minmax(0, 1fr) auto; }
+.sd-listing-price strong.sd-price-sm { font-size: 1.5rem; }
 .sd-thumb { width: 114px; height: 95px; overflow: hidden; border-radius: 10px; background: #dfe9f5; }
 .sd-thumb-art { display: block; width: 100%; height: 100%; }
 .sd-listing-title { margin: 0 0 2px; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.01em; color: #0b1736; }

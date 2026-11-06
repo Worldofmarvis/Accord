@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Link } from 'react-router-dom'
 import { api, errorMessage, POLL_MS } from '../api'
 import Badge from '../components/Badge'
+import IconField from '../components/IconField'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
 import {
@@ -368,23 +369,6 @@ export default function SellerDashboard() {
             </section>
           </div>
         </div>
-    </div>
-  )
-}
-
-/** A form control with a small icon inside its left edge (and an optional arrow on the right, for the category list). */
-function IconField({ icon, chevron, top, children }: { icon: ReactNode; chevron?: ReactNode; top?: boolean; children: ReactNode }) {
-  return (
-    <div className={`sd-icon-field${top ? ' sd-icon-field-top' : ''}`}>
-      <span className="sd-field-icon" aria-hidden="true">
-        {icon}
-      </span>
-      {children}
-      {chevron && (
-        <span className="sd-field-chevron" aria-hidden="true">
-          {chevron}
-        </span>
-      )}
     </div>
   )
 }
