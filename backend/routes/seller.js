@@ -148,7 +148,7 @@ router.get('/seller/sales', as('SELLER'), only('SELLER'), h(async (req, res) => 
 
     return {
       id: n.id,
-      date: (paid?.createdAt ?? n.updatedAt).toISOString(),   // paidAt does not exist yet, so the payment's createdAt stands in
+      date: (paid?.paidAt ?? paid?.createdAt ?? n.updatedAt).toISOString(),  
       service: n.listing.title,
       buyerName: n.buyer.name,
       listPrice: n.listing.listPrice,

@@ -152,6 +152,8 @@ model Payment {
   negotiationId String
   negotiation   Negotiation   @relation(fields: [negotiationId], references: [id])
   paypalOrderId String        @unique
+  captureId     String?
+  paidAt        DateTime?
   amount        Int           // CHANGED: Float -> Int
   status        PaymentStatus @default(PENDING)
   createdAt     DateTime      @default(now())

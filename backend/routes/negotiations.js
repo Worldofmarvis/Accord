@@ -9,30 +9,7 @@ import { scheduleStep } from '../lib/runner.js'
 
 const router = Router()
 
-// Start a negotiation
-router.post('/negotiations', as('BUYER'), only('BUYER'), h(async (req, res) => {
-  const listing = await prisma.listing.findUnique({ where: { id: String(req.body.listingId ?? '') } })
-  if (!listing) return fail(res, 404, 'NOT_FOUND', 'Listing not found')
 
-  const request = req.body.requestId
-    ? await prisma.buyerRequest.findFirst({ where: { id: String(req.body.requestId), buyerId: req.user.id } })
-    : await prisma.buyerRequest.findFirst({ where: { buyerId: req.user.id }, orderBy: { createdAt: 'desc' } })
-  if (req.body.requestId && !request) return fail(res, 404, 'NOT_FOUND', 'Request not found')
-  if (!request) return fail(res, 400, 'VALIDATION', 'Create a request first')
-
-  if (await lockOf(listing.sellerId)) return fail(res, 409, 'SELLER_LOCKED', 'This seller is in another negotiation')
-
-  const n = await prisma.negotiation.create({
-    data: {
-      listingId: listing.id, buyerId: req.user.id, status: 'IN_PROGRESS', currentRound: 1, maxRounds: MAX_ROUNDS,
-      buyerTargetPrice: request.targetPrice, buyerMaxPrice: request.maxPrice,
-      proposal: { create: { listingId: listing.id, requestId: request.id, status: 'ACCEPTED' } },
-    },
-  })
-  await logEvent(n.id, 'negotiation_started', { buyerId: req.user.id })
-  scheduleStep(n.id)
-  res.status(201).json({ id: n.id })
-}))
 
 // Live view
 router.get('/negotiations/:id', negotiationRoute, (req, res) => res.json(view(req.neg, req.side)))

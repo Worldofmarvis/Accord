@@ -29,6 +29,9 @@ export async function loadNeg(id) {
   const waitingOn = status !== 'active' ? null : !last ? 'buyer' : last.role === 'buyer' ? 'seller' : 'buyer'
   const req = r.proposal?.request
 
+  const done = r.payments.find(p => p.status === 'COMPLETED')
+
+
   return {
     id: r.id, listingId: r.listingId, sellerId: r.listing.sellerId, buyerId: r.buyerId,
     requestId: r.proposal?.requestId ?? null, category: r.listing.category,
@@ -42,7 +45,11 @@ export async function loadNeg(id) {
     offers, audit: [],
     agreedPrice: r.finalPrice, paid: r.payments.some(p => p.status === 'COMPLETED'),
     orderId: r.payments[0]?.paypalOrderId ?? null,
-    createdAt: r.createdAt.getTime(), closedAt: status === 'active' ? null : r.updatedAt.getTime(),
+    captureId: done?.captureId ?? null,
+    paidAt: done?.paidAt ? done.paidAt.toISOString() : null,
+    createdAt: r.createdAt.getTime(),
+    closedAt: status === 'active' ? null : r.updatedAt.getTime(),
+    
   }
 }
 

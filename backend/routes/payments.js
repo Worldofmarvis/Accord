@@ -9,7 +9,7 @@ const router = Router()
 
 const paymentOf = n => ({
   negotiationId: n.id, status: n.paid ? 'paid' : 'unpaid', amount: n.agreedPrice,
-  orderId: n.orderId, captureId: null, paidAt: null,
+  orderId: n.orderId, captureId: n.captureId ?? null, paidAt: n.paidAt ?? null,
 })
 
 router.get('/negotiations/:id/payment', negotiationRoute, (req, res) => {
@@ -54,7 +54,13 @@ router.post('/negotiations/:id/payment/capture', negotiationRoute, h(async (req,
   try {
     const result = await captureOrder(n.orderId)
     if (result.status !== 'COMPLETED') return fail(res, 400, 'VALIDATION', `Payment ${result.status}`)
-    await prisma.payment.update({ where: { paypalOrderId: n.orderId }, data: { status: 'COMPLETED' } })
+    // PayPal's own capture id, from the response. It is null in mock mode.
+    const captureId = result.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
+    await prisma.payment.update({
+      where: { paypalOrderId: n.orderId },
+      data: { status: 'COMPLETED', captureId, paidAt: new Date() },
+    })
+
     await logEvent(n.id, 'payment_completed', { orderId: n.orderId })
     res.json(paymentOf(await loadNeg(n.id)))
   } catch (e) {
