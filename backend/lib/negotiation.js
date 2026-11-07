@@ -46,7 +46,7 @@ export async function loadNeg(id) {
     agreedPrice: r.finalPrice, paid: r.payments.some(p => p.status === 'COMPLETED'),
     orderId: r.payments[0]?.paypalOrderId ?? null,
     captureId: done?.captureId ?? null,
-    paidAt: done?.paidAt ? done.paidAt.toISOString() : null,
+    paidAt: done?.paidAt ? new Date(done.paidAt).toISOString() : null,
     createdAt: r.createdAt.getTime(),
     closedAt: status === 'active' ? null : r.updatedAt.getTime(),
     

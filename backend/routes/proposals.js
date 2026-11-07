@@ -146,17 +146,28 @@ router.post('/proposals/:id/accept', who, h(async (req, res) => {
         data: { status: 'DECLINED', closedReason: 'taken' },
       })
       return created
-    },{ maxWait: 15000, timeout: 30000 }   )
+    },{ maxWait: 15000, timeout: 30000 })
   } catch (e) {
     if (e instanceof Http) return fail(res, e.status, e.code, e.message)
     throw e
   }
 
-  await logEvent(neg.id, 'negotiation_started', { buyerId: neg.buyerId, via: 'proposal', proposalId: p.id })
-  scheduleStep(neg.id)
-  res.json(toProposal(await reload(p.id), side))
-}))
+  // 1. Load the updated proposal
+  const reloadedProposal = await reload(p.id)
+  
+  // 2. Respond to the frontend IMMEDIATELY so the browser doesn't timeout
+  res.json(toProposal(reloadedProposal, side))
 
+  // 3. Run the AI agent trigger in the background
+  setTimeout(async () => {
+    try {
+      await logEvent(neg.id, 'negotiation_started', { buyerId: neg.buyerId, via: 'proposal', proposalId: p.id })
+      scheduleStep(neg.id)
+    } catch (err) {
+      console.error("Background agent error:", err)
+    }
+  }, 0)
+}))
 // Decline: only the receiver, only while pending
 router.post('/proposals/:id/decline', who, h(async (req, res) => {
   const found = await loadParty(req, res)
