@@ -77,7 +77,6 @@ function ApproveAndPay({ id }: { id: string }) {
   const mine = approval[viewer]
   const theirs = approval[other]
   const price = approval.agreedPrice
-  const dashboard = viewer === 'buyer' ? '/buyer' : '/seller'
   const unlocked = approval.status === 'approved'
   const declined = approval.status === 'declined'
   const rows: { role: Role; name: string; decision: Decision }[] = [
@@ -193,10 +192,6 @@ function ApproveAndPay({ id }: { id: string }) {
           )}
         </section>
       )}
-
-      <Link to={dashboard} className="muted">
-        Back to my dashboard
-      </Link>
     </div>
   )
 }
