@@ -11,21 +11,21 @@
 
 :root {
   /* ---------- Color: brand ---------- */
-  --color-brand-header: #142c8e; /* sampled: top navigation bar */
+  --color-brand-header: #082b78; /* sampled: top navigation bar */
   --color-brand-header-active: #27419a; /* sampled: active nav pill on the header */
-  --color-primary: #003087; /* sampled: primary buttons, progress ring, dark navy */
+  --color-primary: #0645b5; /* sampled: primary buttons, progress ring, dark navy */
   --color-primary-hover: #001f5c; /* added: primary button hover */
   --color-primary-contrast: #ffffff; /* text on primary and header */
 
-  --color-accent: #0070e0; /* sampled: links and highlights */
-  --color-accent-strong: #0057b3; /* added: link hover, focus ring */
-  --color-accent-soft: #e6f0fd; /* added: light blue fill for highlighted cards */
+  --color-accent: #0878e8; /* sampled: links and highlights */
+  --color-accent-strong: #0759bd; /* added: link hover, focus ring */
+  --color-accent-soft: #eaf3ff; /* added: light blue fill for highlighted cards */
 
   /* ---------- Color: surfaces ---------- */
-  --color-bg: #faf8f5; /* sampled: page background (warm off-white) */
+  --color-bg: #f4f7fc; /* sampled: page background (warm off-white) */
   --color-surface: #ffffff; /* sampled: cards and panels */
-  --color-surface-muted: #f3f1ed; /* added: table headers, disabled fields */
-  --color-surface-hover: #f0eeea; /* added: hover on rows and ghost buttons */
+  --color-surface-muted: #f2f6fc; /* added: table headers, disabled fields */
+  --color-surface-hover: #f5f9ff; /* added: hover on rows and ghost buttons */
 
   /* ---------- Color: text ---------- */
   --color-text: #001435; /* sampled: primary text (near-black navy) */
@@ -33,9 +33,9 @@
   --color-text-subtle: #8a93a3; /* added: placeholders, disabled hints */
 
   /* ---------- Color: borders ---------- */
-  --color-border: #e5e5e5; /* sampled: card and input borders */
-  --color-border-soft: #efefef; /* added: dividers inside cards */
-  --color-border-strong: #9aa3b2; /* added: input border on hover */
+  --color-border: #e2eaf5; /* sampled: card and input borders */
+  --color-border-soft: #edf1f7; /* added: dividers inside cards */
+  --color-border-strong: #b8c6d9; /* added: input border on hover */
 
   /* ---------- Color: status ---------- */
   --color-danger: #d50102; /* sampled: alert banner red (blocked offer, failed payment) */
@@ -98,19 +98,19 @@
 
   /* ---------- Shape ---------- */
   --radius-sm: 8px; /* inputs, badges */
-  --radius-md: 12px; /* small cards */
-  --radius-lg: 16px; /* cards and panels (matches the PayPal cards) */
+  --radius-md: 14px; /* small cards */
+  --radius-lg: 20px; /* cards and panels (matches the PayPal cards) */
   --radius-pill: 999px; /* buttons and nav items */
 
   --border-width: 1px;
 
   /* ---------- Elevation (PayPal cards are flat; shadows are for popovers) ---------- */
-  --shadow-sm: 0 1px 2px rgba(0, 20, 53, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 20, 53, 0.1);
-  --shadow-lg: 0 12px 28px rgba(0, 20, 53, 0.16);
+  --shadow-sm: 0 2px 8px rgba(15, 49, 105, 0.05);
+  --shadow-md: 0 8px 24px rgba(15, 49, 105, 0.08);
+  --shadow-lg: 0 18px 42px rgba(15, 49, 105, 0.14);
 
   /* ---------- Layout ---------- */
-  --content-max-width: 1100px;
+  --content-max-width: 1320px;
   --page-gutter: var(--space-5);
   --header-height: 64px;
 

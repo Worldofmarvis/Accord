@@ -41,3 +41,64 @@
 .dash-item-price { text-align: right; }
 .dash-item-amount { font-size: var(--text-xl); line-height: var(--leading-tight); }
 .dash-empty { color: var(--color-text-muted); }
+
+
+/* Seller dashboard: spacious two-column workspace with a clear creation flow. */
+.seller-dashboard { gap: 24px; }
+.seller-dashboard .page-head { padding: 4px 2px 2px; }
+.seller-dashboard .page-head h1 { font-size: clamp(30px, 3vw, 38px); letter-spacing: -.04em; }
+.seller-dashboard .page-head p { max-width: 58ch; font-size: 15px; }
+.seller-dashboard .page-head .btn { min-width: 168px; }
+.seller-dashboard .notice-warning {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px 8px;
+  padding: 14px 18px; border: 1px solid #f4dcae; border-radius: 14px;
+  background: linear-gradient(100deg, #fff8e9, #fffaf1); color: #87500b;
+  box-shadow: 0 3px 12px rgba(156, 103, 19, .045);
+}
+.seller-dashboard .notice-warning a { color: #0759bd; }
+.seller-dashboard .dash-layout {
+  display: grid; grid-template-columns: minmax(320px, .88fr) minmax(0, 1.22fr);
+  gap: 22px; align-items: start;
+}
+.seller-dashboard .dash-form {
+  width: 100%; max-width: none; flex: initial; gap: 17px;
+  padding: 26px; border-radius: 20px;
+  box-shadow: 0 8px 28px rgba(13, 48, 103, .055);
+}
+.seller-dashboard .dash-form h2 { font-size: 21px; letter-spacing: -.025em; margin-bottom: 2px; }
+.seller-dashboard .field { gap: 7px; }
+.seller-dashboard .field > label { color: #20385f; font-size: 13px; font-weight: 700; }
+.seller-dashboard .dash-form .field-row { gap: 12px; }
+.seller-dashboard .private-note {
+  padding: 13px 14px; border: 1px solid #d8e9ff; border-radius: 13px;
+  background: #f0f7ff; color: #355477; font-size: 13px;
+}
+.seller-dashboard .dash-form-actions { padding-top: 2px; }
+.seller-dashboard .dash-form-actions .btn { min-width: 142px; }
+.seller-dashboard .dash-list { min-width: 0; width: 100%; flex: initial; gap: 22px; }
+.seller-dashboard .dash-list > .card { padding: 24px; }
+.seller-dashboard .dash-list .card-title { font-size: 20px; letter-spacing: -.025em; margin-bottom: 5px; }
+.seller-dashboard .dash-list .small { font-size: 13px; line-height: 1.55; }
+.seller-dashboard .dash-item {
+  padding: 18px 0; border-top-color: #eaf0f7; gap: 14px 20px;
+}
+.seller-dashboard .dash-item:first-of-type { margin-top: 12px; }
+.seller-dashboard .dash-item-title { font-size: 15px; letter-spacing: -.01em; margin-bottom: 4px; }
+.seller-dashboard .dash-item-meta { font-size: 13px; line-height: 1.55; }
+.seller-dashboard .dash-item-side { gap: 10px; }
+.seller-dashboard .dash-item-amount { color: #082f83; font-size: 23px; font-weight: 750; letter-spacing: -.025em; }
+.seller-dashboard .dash-item-side .btn { min-width: 118px; }
+.seller-dashboard .badge { padding: 4px 10px; font-size: 11px; letter-spacing: .01em; }
+.seller-dashboard .dash-empty { margin: 16px 0 0; padding: 18px; border-radius: 12px; background: #f6f9fd; font-size: 14px; }
+@media (max-width: 920px) {
+  .seller-dashboard .dash-layout { grid-template-columns: minmax(0, 1fr); }
+  .seller-dashboard .dash-form { max-width: none; }
+}
+@media (max-width: 560px) {
+  .seller-dashboard .dash-form, .seller-dashboard .dash-list > .card { padding: 18px; }
+  .seller-dashboard .page-head { align-items: flex-start; }
+  .seller-dashboard .page-head .btn { width: 100%; }
+  .seller-dashboard .dash-item { align-items: flex-start; }
+  .seller-dashboard .dash-item-side { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .seller-dashboard .dash-item-price { text-align: left; }
+}

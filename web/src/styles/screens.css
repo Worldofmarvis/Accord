@@ -174,9 +174,7 @@
 
 .offer-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
 .offer-history-head .card-title { margin: 0; }
-.offer-history-toggle { display: flex; gap: var(--space-2); }
 /* AG Studio fills its parent, so the parent needs a height (OfferHistoryGrid sets it from the number of offers). */
-.offer-history-grid { min-height: 192px; width: 100%; }
 
 .offer-card { padding: var(--space-5); border: 2px solid var(--color-border); box-shadow: var(--shadow-md); }
 .offer-card-buyer { border-color: var(--color-buyer); }
