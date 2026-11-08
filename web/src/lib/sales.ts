@@ -61,13 +61,13 @@ export function saleDate(iso: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-/** "YYYY-MM-DD" and "YYYY-MM" in the viewer's calendar, for the grid and the monthly chart. */
+/** "YYYY-MM-DD" and the first of the month ("YYYY-MM-01", so Studio reads it as a date) in the viewer's calendar, for the grid and the monthly chart. */
 function dayAndMonth(iso: string): { day: string; month: string } {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return { day: iso.slice(0, 10), month: iso.slice(0, 7) }
+  if (Number.isNaN(date.getTime())) return { day: iso.slice(0, 10), month: `${iso.slice(0, 7)}-01` }
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  return { day: `${date.getFullYear()}-${month}-${day}`, month: `${date.getFullYear()}-${month}` }
+  return { day: `${date.getFullYear()}-${month}-${day}`, month: `${date.getFullYear()}-${month}-01` }
 }
 
 /**

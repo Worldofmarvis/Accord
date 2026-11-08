@@ -20,3 +20,24 @@ export const appStudioTheme: unknown = base?.withParams({
   borderRadius: 10,
   fontFamily: FONT,
 })
+
+/**
+ * The chart strip of the sales history: the same palette, but with no frame around the dashboard (the card
+ * around it is the frame), a white canvas, and smaller, bolder chart titles. Names are from the AG Studio
+ * theme reference (`studioWrapperBorder`, `studioCanvas*`, `studioWidget*`).
+ */
+export const chartStudioTheme: unknown = base?.withParams({
+  accentColor: '#003087',
+  backgroundColor: '#ffffff',
+  fontFamily: FONT,
+  studioWrapperBorder: false,
+  studioCanvasBorder: false,
+  studioCanvasBackgroundColor: '#ffffff',
+  studioWidgetBorder: { style: 'solid', width: 1, color: '#efece6' },
+  studioWidgetBorderRadius: 12,
+  studioWidgetPadding: 8,
+  studioWidgetTitleFontFamily: FONT,
+  studioWidgetTitleFontSize: 15,
+  studioWidgetTitleFontWeight: 700,
+  studioWidgetTitleTextColor: '#001435',
+})
