@@ -1,13 +1,34 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api, errorMessage } from '../api'
 import Badge from '../components/Badge'
+import IconField from '../components/IconField'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { LockIcon } from '../components/icons'
+import {
+  ArrowRightIcon,
+  BagArt,
+  CalendarIcon,
+  ChatBubbleIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ClipboardIcon,
+  ClockIcon,
+  DocIcon,
+  DollarIcon,
+  GlobeIcon,
+  HandshakeIcon,
+  PencilIcon,
+  PlusIcon,
+  RequestThumb,
+  SendIcon,
+  TargetIcon,
+} from '../components/sellerArt'
 import { useAsync } from '../hooks/useAsync'
 import { categories } from '../lib/categories'
 import { PRICE_ERROR, parsePrice, todayISO } from '../lib/forms'
 import { usd } from '../lib/format'
+import type { BuyerNegotiationRow } from '../types/dashboard'
 import '../styles/dashboards.css'
 
 type Form = { title: string; category: string; deliverables: string; deadline: string; target: string; max: string }
@@ -84,54 +105,79 @@ export default function BuyerDashboard() {
     ) : null
 
   return (
-    <div className="page-stack">
-      <div>
-        <h1>Buyer dashboard</h1>
-        <p className="muted">Set your target and maximum price, then let your agent negotiate in up to 3 rounds.</p>
+    <div className="sd-content">
+      <div className="sd-hero">
+        <div className="sd-hero-text">
+          <h1 className="sd-title">
+            Buyer <span>Dashboard</span>
+          </h1>
+          <p className="sd-subtitle">Set your target and maximum price, then let your agent negotiate in up to 3 rounds.</p>
+          <span className="sd-title-bar" aria-hidden="true" />
+        </div>
+        <BagArt />
       </div>
 
-      <div className="dash-layout">
-        <form className="card dash-form" onSubmit={submit} noValidate aria-label="New request">
-          <h2>New request</h2>
+      <div className="sd-grid">
+        <form className="sd-card sd-form" onSubmit={submit} noValidate aria-label="New request">
+          <div className="sd-form-head">
+            <span className="sd-form-badge" aria-hidden="true">
+              <PlusIcon size={26} color="#fff" />
+            </span>
+            <div>
+              <h2>New request</h2>
+              <p>Tell sellers what you need.</p>
+            </div>
+          </div>
 
           <div className="field">
             <label htmlFor="req-title">What do you need?</label>
-            <input id="req-title" className="input" type="text" placeholder="5-page business website" value={form.title} onChange={set('title')} {...err('title')} />
+            <IconField icon={<DocIcon size={20} />}>
+              <input id="req-title" className="input" type="text" placeholder="5-page business website" value={form.title} onChange={set('title')} {...err('title')} />
+            </IconField>
             {errMsg('title')}
           </div>
 
           <div className="field">
             <label htmlFor="req-cat">Category</label>
-            <select id="req-cat" className="input" value={form.category} onChange={set('category')}>
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+            <IconField icon={<GlobeIcon size={20} />} chevron={<ChevronDownIcon size={18} />}>
+              <select id="req-cat" className="input" value={form.category} onChange={set('category')}>
+                {categories.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </IconField>
           </div>
 
           <div className="field">
             <label htmlFor="req-deliv">Deliverables</label>
-            <textarea id="req-deliv" className="input textarea" placeholder="5 pages, contact form, blog" value={form.deliverables} onChange={set('deliverables')} {...err('deliverables')} />
+            <IconField icon={<PencilIcon size={20} />} top>
+              <textarea id="req-deliv" className="input textarea" placeholder="5 pages, contact form, blog" value={form.deliverables} onChange={set('deliverables')} {...err('deliverables')} />
+            </IconField>
             {errMsg('deliverables')}
           </div>
 
           <div className="field">
             <label htmlFor="req-deadline">Deadline</label>
-            <input id="req-deadline" className="input" type="date" min={todayISO()} value={form.deadline} onChange={set('deadline')} {...err('deadline')} />
+            <IconField icon={<CalendarIcon size={20} />}>
+              <input id="req-deadline" className="input" type="date" min={todayISO()} value={form.deadline} onChange={set('deadline')} {...err('deadline')} />
+            </IconField>
             {errMsg('deadline')}
           </div>
 
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="req-target">Target price (USD)</label>
-              <input id="req-target" className="input" type="text" inputMode="numeric" value={form.target} onChange={set('target')} {...err('target')} />
-              {errMsg('target')}
-            </div>
-            <div className="field">
-              <label htmlFor="req-max">Maximum price (USD)</label>
-              <input id="req-max" className="input" type="text" inputMode="numeric" value={form.max} onChange={set('max')} {...err('max')} />
-              {errMsg('max')}
-            </div>
+          <div className="field">
+            <label htmlFor="req-target">Target price (USD)</label>
+            <IconField icon={<TargetIcon size={20} />}>
+              <input id="req-target" className="input" type="text" inputMode="numeric" placeholder="Enter target price" value={form.target} onChange={set('target')} {...err('target')} />
+            </IconField>
+            {errMsg('target')}
+          </div>
+
+          <div className="field">
+            <label htmlFor="req-max">Maximum price (USD)</label>
+            <IconField icon={<DollarIcon size={20} />}>
+              <input id="req-max" className="input" type="text" inputMode="numeric" placeholder="Enter maximum price" value={form.max} onChange={set('max')} {...err('max')} />
+            </IconField>
+            {errMsg('max')}
           </div>
 
           <div className="private-note">
@@ -150,95 +196,144 @@ export default function BuyerDashboard() {
             </div>
           )}
 
-          <div className="dash-form-actions">
-            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+          <div className="sd-form-actions">
+            <button type="submit" className="sd-create-btn" disabled={submitting}>
+              <SendIcon size={20} />
               {submitting ? 'Saving...' : 'Save request'}
             </button>
           </div>
         </form>
 
-        <div className="dash-list">
-          <section aria-label="My negotiations" className="card">
-            <h2 className="card-title">My negotiations</h2>
-            <p className="muted small">Each negotiation lasts at most 3 rounds.</p>
-            {negotiations.error != null && <ErrorCard error={negotiations.error} onRetry={negotiations.reload} />}
-            {negotiations.error == null && !negotiations.data && <LoadingCard label="Loading your negotiations..." />}
-            {negotiations.error == null && negotiations.data?.length === 0 && (
-              <p className="dash-empty">No negotiations yet. Search for a service to start one.</p>
-            )}
-            {negotiations.error == null &&
-              negotiations.data?.map((n) => {
-                const path = `/negotiations/${encodeURIComponent(n.id)}`
-                return (
-                  <div key={n.id} className="dash-item">
-                    <div className="dash-item-main">
-                      <div className="dash-item-tags">
-                        {n.status === 'active' && (
-                          <Badge tone="info">
-                            Active, round {n.round} of {n.maxRounds}
-                          </Badge>
-                        )}
-                        {n.status === 'agreed' && <Badge tone="success">Agreed</Badge>}
-                        {n.status === 'no_agreement' && <Badge tone="warning">No agreement</Badge>}
-                      </div>
-                      <h3 className="dash-item-title">{n.service}</h3>
-                      <p className="dash-item-meta">{n.sellerName}</p>
-                      <p className="dash-item-meta">
-                        Your agent {usd(n.buyerOffer)}, seller agent {usd(n.sellerOffer)}
-                      </p>
-                    </div>
-                    <div className="dash-item-side">
-                      {n.status === 'active' && (
-                        <Link to={path} className="btn btn-primary btn-lg">
-                          Open negotiation
-                        </Link>
-                      )}
-                      {n.status === 'agreed' && (
-                        <Link to={`${path}/pay`} className="btn btn-primary btn-lg">
-                          Approve and pay
-                        </Link>
-                      )}
-                      {n.status === 'no_agreement' && (
-                        <Link to={`${path}/no-agreement`} className="btn btn-secondary btn-lg">
-                          See what happened
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+        <div className="sd-stack">
+          <section aria-label="My negotiations" className="sd-card sd-panel">
+            <header className="sd-panel-head">
+              <span className="sd-panel-icon" aria-hidden="true">
+                <HandshakeIcon size={44} />
+              </span>
+              <div className="sd-panel-titles">
+                <h2>My negotiations</h2>
+                <p>Active, agreed and finished negotiations.</p>
+              </div>
+              <span className="sd-panel-note">Each lasts at most 3 rounds.</span>
+            </header>
+            <div className="sd-panel-body">
+              {negotiations.error != null && <ErrorCard error={negotiations.error} onRetry={negotiations.reload} />}
+              {negotiations.error == null && !negotiations.data && <LoadingCard label="Loading your negotiations..." />}
+              {negotiations.error == null && negotiations.data?.length === 0 && (
+                <p className="dash-empty">No negotiations yet. Search for a service to start one.</p>
+              )}
+              {negotiations.error == null && negotiations.data?.map((n) => <NegotiationRow key={n.id} n={n} />)}
+            </div>
           </section>
 
-          <section aria-label="My requests" className="card">
-            <h2 className="card-title">My requests</h2>
-            <p className="muted small">Your target and maximum are private to you.</p>
-            {requests.error != null && <ErrorCard error={requests.error} onRetry={requests.reload} />}
-            {requests.error == null && !requests.data && <LoadingCard label="Loading your requests..." />}
-            {requests.error == null && requests.data?.length === 0 && <p className="dash-empty">No requests yet.</p>}
-            {requests.error == null &&
-              requests.data?.map((r) => (
-                <div key={r.id} className="dash-item">
-                  <div className="dash-item-main">
-                    <div className="dash-item-tags">
-                      <Badge tone="info">{r.category}</Badge>
+          <section aria-label="My requests" className="sd-card sd-panel">
+            <header className="sd-panel-head">
+              <span className="sd-panel-icon" aria-hidden="true">
+                <ClipboardIcon size={44} />
+              </span>
+              <div className="sd-panel-titles">
+                <h2>My requests</h2>
+                <p>Your target and maximum are private to you.</p>
+              </div>
+              {requests.data && (
+                <span className="sd-panel-total">
+                  Total: {requests.data.length} {requests.data.length === 1 ? 'request' : 'requests'}
+                </span>
+              )}
+            </header>
+            <div className="sd-panel-body">
+              {requests.error != null && <ErrorCard error={requests.error} onRetry={requests.reload} />}
+              {requests.error == null && !requests.data && <LoadingCard label="Loading your requests..." />}
+              {requests.error == null && requests.data?.length === 0 && <p className="dash-empty">No requests yet.</p>}
+              {requests.error == null &&
+                requests.data?.map((r) => (
+                  <div key={r.id} className="sd-listing sd-listing-static">
+                    <div className="sd-thumb">
+                      <RequestThumb />
                     </div>
-                    <h3 className="dash-item-title">{r.title}</h3>
-                    <p className="dash-item-meta">{r.deliverables}</p>
-                    <p className="dash-item-meta">Deadline {r.deadline}</p>
-                  </div>
-                  <div className="dash-item-side">
-                    <div className="dash-item-price">
-                      <div className="muted caption">Target / max</div>
-                      <div className="dash-item-amount">
-                        {usd(r.target)} / {usd(r.max)}
+                    <div className="sd-listing-main">
+                      <div className="sd-tags">
+                        <Badge tone="info">{r.category}</Badge>
+                        <Badge tone="neutral">
+                          <LockIcon size={12} />
+                          Only you can see this
+                        </Badge>
                       </div>
+                      <h3 className="sd-listing-title">{r.title}</h3>
+                      <p className="sd-listing-meta">
+                        {r.deliverables} &bull; Deadline {r.deadline}
+                      </p>
                     </div>
-                    <Badge tone="neutral">Only you can see this</Badge>
+                    <div className="sd-listing-price">
+                      <span>Target / max</span>
+                      <strong className="sd-price-sm">
+                        {usd(r.target)} / {usd(r.max)}
+                      </strong>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </section>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** One negotiation in the buyer's list, with the right next step for where it stands. */
+function NegotiationRow({ n }: { n: BuyerNegotiationRow }) {
+  const path = `/negotiations/${encodeURIComponent(n.id)}`
+
+  // The round picture on the left follows where the negotiation stands.
+  let tone: 'active' | 'approved' | 'neutral' = 'neutral'
+  let icon: ReactNode = <ClockIcon size={30} />
+  if (n.status === 'active') {
+    tone = 'active'
+    icon = <ChatBubbleIcon size={30} />
+  } else if (n.status === 'agreed') {
+    tone = 'approved'
+    icon = <CheckCircleIcon size={34} />
+  }
+
+  return (
+    <div className="sd-row">
+      <span className={`sd-row-icon sd-row-icon-${tone}`} aria-hidden="true">
+        {icon}
+      </span>
+      <div className="sd-row-main">
+        <div className="sd-tags">
+          {n.status === 'active' && (
+            <Badge tone="info">
+              Active, round {n.round} of {n.maxRounds}
+            </Badge>
+          )}
+          {n.status === 'agreed' && <Badge tone="success">Agreed</Badge>}
+          {n.status === 'no_agreement' && <Badge tone="neutral">No agreement</Badge>}
+        </div>
+        <h3 className="sd-row-title">{n.service}</h3>
+        <p className="sd-row-meta">
+          {n.sellerName} &bull; Your agent {usd(n.buyerOffer)}, seller agent {usd(n.sellerOffer)}
+        </p>
+      </div>
+      <div className="sd-row-action">
+        {n.status === 'active' && (
+          <Link to={path} className="sd-pill sd-pill-fill">
+            Open negotiation
+            <ArrowRightIcon size={16} />
+          </Link>
+        )}
+        {n.status === 'agreed' && (
+          <Link to={`${path}/pay`} className="sd-pill sd-pill-fill">
+            Approve and pay
+            <ArrowRightIcon size={16} />
+          </Link>
+        )}
+        {n.status === 'no_agreement' && (
+          <Link to={`${path}/no-agreement`} className="sd-pill sd-pill-outline">
+            See what happened
+            <ArrowRightIcon size={16} />
+          </Link>
+        )}
       </div>
     </div>
   )
