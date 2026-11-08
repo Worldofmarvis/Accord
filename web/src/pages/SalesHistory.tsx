@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, POLL_MS } from '../api'
 import GridBoundary from '../components/GridBoundary'
+import SalesKpis from '../components/SalesKpis'
 import SalesTable from '../components/SalesTable'
 import { ErrorCard, LoadingCard } from '../components/StateCards'
 import { useAsync } from '../hooks/useAsync'
@@ -16,18 +17,22 @@ import {
 } from '../lib/sales'
 
 const SalesHistoryStudio = lazy(() => import('../components/SalesHistoryStudio'))
+const SalesLedgerGrid = lazy(() => import('../components/SalesLedgerGrid'))
 
 const groups: SaleGroup[] = ['all', 'sold', 'progress', 'lost']
 const periods: SalePeriod[] = ['all', '90d', 'year']
 
-type View = 'dashboard' | 'table'
+type View = 'grid' | 'table'
 
-/** The seller's sales history: what was sold, what is still open and what was lost, as an AG Studio dashboard. */
+/**
+ * The seller's sales history: what was sold, what is still open and what was lost.
+ * Summary cards and AG Studio charts follow the time period; the AG Grid ledger below also follows the deal filter.
+ */
 export default function SalesHistory() {
   const sales = useAsync(() => api.listSellerSales(), [])
   const [group, setGroup] = useState<SaleGroup>('all')
   const [period, setPeriod] = useState<SalePeriod>('all')
-  const [view, setView] = useState<View>('dashboard')
+  const [view, setView] = useState<View>('grid')
 
   const all = useMemo(() => sales.data ?? [], [sales.data])
 
@@ -62,15 +67,26 @@ export default function SalesHistory() {
   const table = <SalesTable sales={shown} />
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-wide">
       <div className="page-head">
         <div>
           <h1>Sales history</h1>
           <p className="muted">Every deal your agent has closed or lost, and what you earned. Open deals update by themselves.</p>
         </div>
-        <Link to="/seller" className="btn btn-secondary btn-lg">
-          Back to my dashboard
-        </Link>
+        <div className="history-head-actions">
+          {all.length > 0 && (
+            <div className="history-seg" role="group" aria-label="Time period">
+              {periods.map((p) => (
+                <button key={p} type="button" className={period === p ? 'is-active' : ''} aria-pressed={period === p} onClick={() => setPeriod(p)}>
+                  {periodLabel[p]}
+                </button>
+              ))}
+            </div>
+          )}
+          <Link to="/seller" className="btn btn-secondary btn-lg">
+            Back to my dashboard
+          </Link>
+        </div>
       </div>
 
       {sales.error != null && <ErrorCard error={sales.error} onRetry={sales.reload} />}
@@ -86,15 +102,49 @@ export default function SalesHistory() {
         </section>
       )}
 
-      {sales.data && all.length > 0 && (
-        <section aria-label="Sales history" className="card history-card">
-          <div className="history-toolbar">
+      {sales.data && all.length > 0 && inRange.length === 0 && (
+        <section aria-label="No deals in this period" className="card history-empty">
+          <h2 className="card-title">No deals in this period</h2>
+          <p className="muted">Nothing was closed or lost in {periodLabel[period].toLowerCase()}.</p>
+          <button type="button" className="btn btn-secondary btn-lg" onClick={resetFilters}>
+            Show all time
+          </button>
+        </section>
+      )}
+
+      {sales.data && inRange.length > 0 && (
+        <>
+          <SalesKpis sales={inRange} />
+
+          <section aria-label="Trends" className="card history-trends">
+            <GridBoundary fallback={null}>
+              <Suspense fallback={<p className="muted" role="status">Loading the charts...</p>}>
+                <SalesHistoryStudio sales={inRange} />
+              </Suspense>
+            </GridBoundary>
+          </section>
+
+          <section aria-label="Sales ledger" className="card history-card">
+            <div className="history-toolbar">
+              <div>
+                <h2 className="history-title">Sales ledger</h2>
+                <p className="muted small history-hint">Select rows to total them, or double-click a row to open the deal.</p>
+              </div>
+              <div className="history-seg history-seg--view" role="group" aria-label="View">
+                {(['grid', 'table'] as const).map((v) => (
+                  <button key={v} type="button" className={view === v ? 'is-active' : ''} aria-pressed={view === v} onClick={() => setView(v)}>
+                    {v === 'grid' ? 'Interactive grid' : 'Plain table'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="history-filters" role="group" aria-label="Show deals">
               {groups.map((g) => (
                 <button
                   key={g}
                   type="button"
-                  className={`chip${group === g ? ' is-active' : ''}`}
+                  className={`chip chip-${g}${group === g ? ' is-active' : ''}`}
                   aria-pressed={group === g}
                   onClick={() => setGroup(g)}
                 >
@@ -102,61 +152,32 @@ export default function SalesHistory() {
                 </button>
               ))}
             </div>
-            <div className="history-filters" role="group" aria-label="Time period">
-              {periods.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`chip${period === p ? ' is-active' : ''}`}
-                  aria-pressed={period === p}
-                  onClick={() => setPeriod(p)}
-                >
-                  {periodLabel[p]}
-                </button>
-              ))}
-            </div>
-            <div className="history-filters" role="group" aria-label="View">
-              {(['dashboard', 'table'] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={`chip${view === v ? ' is-active' : ''}`}
-                  aria-pressed={view === v}
-                  onClick={() => setView(v)}
-                >
-                  {v === 'dashboard' ? 'Dashboard' : 'Simple table'}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {shown.length === 0 ? (
-            <div className="history-empty">
-              <p className="muted">No deals match these filters.</p>
-              <button type="button" className="btn btn-secondary btn-lg" onClick={resetFilters}>
-                Show all deals
-              </button>
-            </div>
-          ) : view === 'table' ? (
-            table
-          ) : (
-            <>
-              <p className="muted small history-hint">Click a bar or a slice to filter the ledger. Click it again to clear.</p>
+            {shown.length === 0 ? (
+              <div className="history-empty">
+                <p className="muted">No deals match these filters.</p>
+                <button type="button" className="btn btn-secondary btn-lg" onClick={resetFilters}>
+                  Show all deals
+                </button>
+              </div>
+            ) : view === 'table' ? (
+              table
+            ) : (
               <GridBoundary
                 fallback={
                   <>
-                    <p className="muted small">The dashboard could not load, so here is the table.</p>
+                    <p className="muted small">The interactive grid could not load, so here is the table.</p>
                     {table}
                   </>
                 }
               >
-                <Suspense fallback={<p className="muted" role="status">Loading the dashboard...</p>}>
-                  <SalesHistoryStudio sales={shown} />
+                <Suspense fallback={<p className="muted" role="status">Loading the ledger...</p>}>
+                  <SalesLedgerGrid sales={shown} />
                 </Suspense>
               </GridBoundary>
-            </>
-          )}
-        </section>
+            )}
+          </section>
+        </>
       )}
     </div>
   )
