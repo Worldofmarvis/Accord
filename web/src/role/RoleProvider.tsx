@@ -7,6 +7,7 @@ import { useAsync } from '../hooks/useAsync'
 import type { Role } from '../types/me'
 import { RoleContext } from './context'
 import { homePath } from './home'
+import DemoLogin from '../components/DemoLogin'
 
 const STORAGE_KEY = 'accord.role'
 
@@ -33,6 +34,15 @@ export default function RoleProvider({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
 
   if (meState.error != null && !meState.data) {
+    // Nobody is signed in on this tab yet (the back end answered 401): offer the demo users.
+    const code = typeof meState.error === 'object' ? (meState.error as { code?: unknown }).code : undefined
+    if (code === 'UNAUTHENTICATED') {
+      return (
+        <div className="shell-main">
+          <DemoLogin onChosen={() => meState.reload()} />
+        </div>
+      )
+    }
     return (
       <div className="shell-main">
         <ErrorCard error={meState.error} onRetry={meState.reload} />
