@@ -96,4 +96,4 @@ This one command starts the backend API, the web frontend, and the AI agent toge
 
 ## More Documentation
 
-For environment variables, PayPal sandbox account setup, API routes, database rules, and troubleshooting, see the full [Setup Guide](setup.md).
+For environment variables, PayPal sandbox account setup, API routes, database rules, and troubleshooting, see the full [Setup Guide](SETUP.md).
