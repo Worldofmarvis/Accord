@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "uvicorn": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n WEB,BACKEND,AGENT \"npm run dev --prefix web\" \"npm run dev --prefix backend\" \"python -m uvicorn app:app --app-dir agents --reload --host 127.0.0.1 --port 8000\""
+  }
+}
