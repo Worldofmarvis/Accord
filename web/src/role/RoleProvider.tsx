@@ -37,12 +37,10 @@ export default function RoleProvider({ children }: { children: ReactNode }) {
     // Nobody is signed in on this tab yet (the back end answered 401): offer the demo users.
     const code = typeof meState.error === 'object' ? (meState.error as { code?: unknown }).code : undefined
     if (code === 'UNAUTHENTICATED') {
-      return (
-        <div className="shell-main">
-          <DemoLogin onChosen={() => meState.reload()} />
-        </div>
-      )
-    }
+     return <DemoLogin onChosen={() => meState.reload()} />
+   }
+
+
     return (
       <div className="shell-main">
         <ErrorCard error={meState.error} onRetry={meState.reload} />
